@@ -35,7 +35,7 @@ npm install
 node --experimental-strip-types src/server.ts
 ```
 
-Mở trình duyệt tại: **//caulong-pro.onrender.com**
+Mở trình duyệt tại: **https://caulong-pro.onrender.com**
 - Màn hình khán giả trực tiếp: **https://caulong-pro.onrender.com/live.html**
 - Hóa đơn in: **https://caulong-pro.onrender.com/invoice.html?code=MÃ_ĐƠN**
 
