@@ -1,0 +1,13 @@
+{
+  "name": "caulong-pro",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "build": "cd backend && npm install",
+    "start": "node --experimental-strip-types backend/src/server.ts"
+  }
+}
