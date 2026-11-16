@@ -35,9 +35,9 @@ npm install
 node --experimental-strip-types src/server.ts
 ```
 
-Mở trình duyệt tại: **http://localhost:4000**
-- Màn hình khán giả trực tiếp: **http://localhost:4000/live.html**
-- Hóa đơn in: **http://localhost:4000/invoice.html?code=MÃ_ĐƠN**
+Mở trình duyệt tại: **//caulong-pro.onrender.com**
+- Màn hình khán giả trực tiếp: **https://caulong-pro.onrender.com/live.html**
+- Hóa đơn in: **https://caulong-pro.onrender.com/invoice.html?code=MÃ_ĐƠN**
 
 ### Tài khoản demo được tạo sẵn
 | Vai trò | Số điện thoại | Mật khẩu | Quyền hạn |
@@ -74,4 +74,4 @@ python scratch/e2e2.py
 python scratch/e2e3.py
 ```
 
-Chi tiết triển khai Docker, cấu hình biến môi trường (`.env`) và kết nối Webhook ngân hàng thực tế: xem [DEPLOY.md](file:///c:/Users/0965.599.434/Downloads/Documents/%E1%BA%A0I%202026/DEPLOY.md).
+Chi tiết triển khai Docker, cấu hình biến môi trường (`.env`) và kết nối Webhook ngân hàng thực tế: xem [DEPLOY.md]
