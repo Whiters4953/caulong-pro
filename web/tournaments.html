@@ -1,0 +1,1010 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="origin">
+<meta name="theme-color" content="#0f766e">
+<meta name="description" content="CầuLông Pro – Hệ sinh thái đặt sân cầu lông thời gian thực, tìm đối thủ ELO gần đây, lịch sử thi đấu BWF, tìm huấn luyện viên và quản lý giải đấu.">
+<title>Tổ chức Giải đấu & Bảng điểm BWF – CầuLông Pro</title>
+<script>window.PAGE_TAB="tour";</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={
+  darkMode:'class',
+  theme:{
+    extend:{
+      fontFamily:{
+        sans:['"Be Vietnam Pro"','-apple-system','BlinkMacSystemFont','"Segoe UI"','Roboto','sans-serif'],
+        mono:['"JetBrains Mono"','ui-monospace','monospace']
+      },
+      colors:{
+        brand:{DEFAULT:'#0f766e',light:'#ccfbf1',dark:'#082f35',mid:'#14b8a6'},
+        accent:{DEFAULT:'#f97316',dark:'#ea580c'}
+      }
+    }
+  }
+}
+</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body class="min-h-screen">
+<a href="#main" class="sr-only focus:not-sr-only">Bỏ qua điều hướng</a>
+
+<!-- ===== HEADER ===== -->
+<header id="topbar">
+  <div class="max-w-7xl mx-auto px-3 md:px-4 h-16 flex items-center justify-between gap-2">
+    <!-- Logo -->
+    <a href="/" class="flex items-center gap-2 font-extrabold text-lg shrink-0" aria-label="CầuLông Pro">
+      <div class="logo-wrap">🏸</div>
+      <div class="leading-tight">
+        <span class="block text-base font-extrabold tracking-tight">Cầu<span class="text-brand">Lông</span> Pro</span>
+        <span class="hidden lg:flex items-center gap-1 text-[10px] font-semibold text-slate-400">
+          <span class="w-1.5 h-1.5 bg-green-500 rounded-full pulse"></span>SMASH CLUB
+        </span>
+      </div>
+    </a>
+
+    <!-- Desktop nav (không cuộn ngang / không bị biến thành slider) -->
+    <nav aria-label="Điều hướng chính" class="hidden md:flex flex-1 justify-center min-w-0">
+      <div id="tabs"></div>
+    </nav>
+
+    <!-- Right actions -->
+    <div class="flex items-center gap-1.5 shrink-0">
+      <span id="live" class="hidden"></span>
+      <button id="bell" class="hidden iconbtn relative" aria-label="Thông báo">
+        🔔<span id="bellN" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 grid place-items-center font-bold">0</span>
+      </button>
+      <button id="dark" class="iconbtn" aria-label="Đổi giao diện sáng/tối">🌓</button>
+      <span id="who" class="hidden"></span>
+      <button id="loginBtn" class="btn btn-primary !py-2 !px-3 !text-xs">Đăng nhập</button>
+    </div>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<section id="hero" class="hidden">
+  <div class="max-w-6xl mx-auto px-4 py-10 md:py-14 grid md:grid-cols-12 gap-8 items-center">
+    <!-- Left -->
+    <div class="md:col-span-7 space-y-5">
+      <div class="hero-badge">
+        <span>🏸</span> Hệ sinh thái Cầu Lông #1 Phú Thọ · Chuẩn BWF & ELO
+      </div>
+      <h1 class="hero-title">
+        Đặt sân tức thì, <em>thách đấu đối thủ</em> & nâng tầm kỹ năng cầu lông
+      </h1>
+      <p class="text-white/85 text-sm md:text-base max-w-xl leading-relaxed">
+        Xem sơ đồ 6 sân thảm Yonex thời gian thực, giữ chỗ VietQR trong 10 phút, tìm đối thủ cùng trình độ quanh bạn, lưu lịch sử thi đấu tính điểm ELO và đặt lịch học cùng HLV chuyên nghiệp.
+      </p>
+      <div class="flex flex-wrap gap-2.5">
+        <a href="#booking" class="btn btn-accent text-sm px-5 py-3">📅 Đặt sân ngay →</a>
+        <button type="button" onclick="switchTab('opponents')" class="btn btn-ghost text-sm px-4 py-3">⚔️ Tìm đối thủ gần đây</button>
+        <button type="button" onclick="switchTab('coaches')" class="btn btn-ghost text-sm px-4 py-3">🎓 Tìm HLV cầu lông</button>
+      </div>
+      <!-- Quick feature pills (Smash Club style) -->
+      <div class="flex flex-wrap gap-2 pt-1">
+        <button type="button" onclick="switchTab('history')" class="hero-quick-pill">📊 Lịch sử & Bảng ELO</button>
+        <button type="button" onclick="switchTab('social')" class="hero-quick-pill">🤝 Tuyển giao lưu & CLB</button>
+        <button type="button" onclick="switchTab('tour')" class="hero-quick-pill">🏆 Giải đấu & BWF Live</button>
+        <a href="#venues-sec" class="hero-quick-pill">📍 Bản đồ sân gần tôi</a>
+      </div>
+      <!-- Stats -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1" id="heroStats">
+        <div class="stat-card"><b data-k="courts">6</b><span>Sân thảm Yonex</span></div>
+        <div class="stat-card"><b data-k="bookings">–</b><span>Lượt đặt sân</span></div>
+        <div class="stat-card"><b data-k="members">–</b><span>VĐV & Hội viên</span></div>
+        <div class="stat-card"><b data-k="posts">–</b><span>Kèo giao lưu mở</span></div>
+      </div>
+    </div>
+
+    <!-- Right: court heatmap + live highlight -->
+    <div class="md:col-span-5 hm-card hidden md:block" aria-hidden="true">
+      <div class="flex justify-between items-center text-xs text-white/85 mb-3">
+        <b class="text-sm font-bold flex items-center gap-1.5">⚡ Trạng thái 6 sân trực tiếp</b>
+        <div class="flex gap-2.5">
+          <span class="flex items-center gap-1"><i class="legend-box free !w-2.5 !h-2.5"></i> Trống</span>
+          <span class="flex items-center gap-1"><i class="legend-box booked !w-2.5 !h-2.5"></i> Đặt</span>
+          <span class="flex items-center gap-1"><i class="legend-box playing !w-2.5 !h-2.5"></i> Đang đánh</span>
+        </div>
+      </div>
+      <div id="heroMatrix"></div>
+      <div class="mt-4 pt-3 border-t border-white/15 flex items-center justify-between text-xs text-white/80">
+        <span>🏸 Thảm PVC chống trượt · Trần cao 10.5m · Đèn LED chống chói</span>
+        <a href="#booking" class="font-bold text-amber-300 underline ml-2 shrink-0">Chọn ô ↓</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== MAIN ===== -->
+<main id="main" class="max-w-6xl mx-auto p-3 md:p-5 space-y-5">
+
+<!-- =========================================================
+     TAB 1: ĐẶT SÂN (BOOKING)
+     ========================================================= -->
+<section id="t-book" class="hidden space-y-5">
+
+  <!-- Trải nghiệm Cầu Lông Smash Club (Quick Hub Cards) -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div onclick="switchTab('opponents')" class="card card-hover p-3.5 cursor-pointer flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-orange-100 dark:bg-orange-950 text-xl grid place-items-center shrink-0">⚔️</div>
+      <div class="min-w-0">
+        <div class="font-bold text-sm truncate">Tìm đối thủ gần đây</div>
+        <div class="text-xs text-slate-500 truncate">Ghép kèo Đơn/Đôi theo ELO</div>
+      </div>
+    </div>
+    <div onclick="switchTab('history')" class="card card-hover p-3.5 cursor-pointer flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-teal-100 dark:bg-teal-950 text-xl grid place-items-center shrink-0">📊</div>
+      <div class="min-w-0">
+        <div class="font-bold text-sm truncate">Lịch sử & Hạng ELO</div>
+        <div class="text-xs text-slate-500 truncate">Thống kê BWF 21 điểm</div>
+      </div>
+    </div>
+    <div onclick="switchTab('coaches')" class="card card-hover p-3.5 cursor-pointer flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-950 text-xl grid place-items-center shrink-0">🎓</div>
+      <div class="min-w-0">
+        <div class="font-bold text-sm truncate">Tìm HLV Cầu lông</div>
+        <div class="text-xs text-slate-500 truncate">Học 1-1 & nhóm chuẩn BWF</div>
+      </div>
+    </div>
+    <div onclick="switchTab('social')" class="card card-hover p-3.5 cursor-pointer flex items-center gap-3">
+      <div class="w-11 h-11 rounded-2xl bg-purple-100 dark:bg-purple-950 text-xl grid place-items-center shrink-0">🏸</div>
+      <div class="min-w-0">
+        <div class="font-bold text-sm truncate">CLB & Đan cước vợt</div>
+        <div class="text-xs text-slate-500 truncate">Giao lưu vãng lai & BG80/65</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4-step process -->
+  <div class="card p-4 md:p-5">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h2 class="font-extrabold text-xs uppercase tracking-wider text-slate-400">Quy trình đặt sân 4 bước</h2>
+      <span class="chip text-xs">⚡ Tự động mở khóa nếu không cọc sau 10 phút</span>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="font-bold text-sm">Chọn sân & khung giờ</div>
+          <div class="text-xs text-slate-500 mt-0.5">Chạm các ô màu xanh liên tiếp</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <div class="font-bold text-sm">Giữ chỗ 10 phút</div>
+          <div class="text-xs text-slate-500 mt-0.5">Khóa nguyên tử chống đặt trùng</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="font-bold text-sm">Quét mã VietQR</div>
+          <div class="text-xs text-slate-500 mt-0.5">Đặt cọc tự động đúng nội dung</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <div class="font-bold text-sm">Nhận sân & Tích điểm</div>
+          <div class="text-xs text-slate-500 mt-0.5">Nhắc lịch tự động trước 60 phút</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Venue + map -->
+  <div id="venues-sec" class="card p-4 md:p-5 grid md:grid-cols-5 gap-5">
+    <div class="md:col-span-2 space-y-3">
+      <div>
+        <h2 class="font-extrabold text-xl">Cụm sân cầu lông gần bạn</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Bấm vào cụm sân để xem vị trí và khoảng cách di chuyển</p>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <button id="geo" class="btn btn-outline !py-2 !text-xs">📍 Định vị khoảng cách từ chỗ tôi</button>
+        <span id="geo-out" class="text-xs font-semibold text-brand"></span>
+      </div>
+      <div>
+        <label>Lọc theo khu vực
+          <select id="district" class="mt-1">
+            <option value="">Tất cả khu vực (Phú Thọ)</option>
+            <option>Việt Trì</option>
+            <option>Phú Thọ</option>
+            <option>Lâm Thao</option>
+          </select>
+        </label>
+      </div>
+      <div id="venues" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+    </div>
+    <div class="md:col-span-3"><div id="map"></div></div>
+  </div>
+
+  <!-- Booking grid -->
+  <div id="booking" class="card p-4 md:p-5 space-y-3.5 scroll-mt-20">
+    <!-- Header -->
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="font-extrabold text-xl">Sơ đồ sân & giờ trống</h2>
+          <span class="chip text-xs">6 Sân tiêu chuẩn BWF</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">Chạm ô xanh đầu tiên để chọn giờ bắt đầu, chạm ô thứ hai cùng sân để kéo dài khung giờ thuê.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button id="dayPrev" class="iconbtn" aria-label="Ngày trước">‹</button>
+        <input id="date" type="date" aria-label="Chọn ngày" style="width:auto">
+        <button id="dayNext" class="iconbtn" aria-label="Ngày sau">›</button>
+        <div class="flex gap-1" id="quick"></div>
+      </div>
+    </div>
+
+    <!-- Legend (Fixed color boxes) -->
+    <div class="flex flex-wrap gap-x-5 gap-y-2 items-center text-xs font-semibold" style="color:var(--muted)">
+      <span class="flex items-center gap-1.5"><i class="legend-box free"></i> Còn trống</span>
+      <span class="flex items-center gap-1.5"><i class="legend-box booked"></i> Đã đặt / Giữ chỗ</span>
+      <span class="flex items-center gap-1.5"><i class="legend-box playing"></i> Đang thi đấu</span>
+      <span class="flex items-center gap-1.5"><i class="legend-box past"></i> Đã qua giờ</span>
+      <label class="ml-auto inline-flex items-center gap-2 text-xs font-bold cursor-pointer">
+        <input type="checkbox" id="onlyFree"> Chỉ hiện sân còn trống
+      </label>
+    </div>
+    <div id="rules" class="text-xs"></div>
+
+    <!-- Grid -->
+    <div class="overflow-x-auto pb-1" id="gridwrap">
+      <table id="grid-book"></table>
+    </div>
+
+    <!-- Pick bar -->
+    <div id="pick" class="hidden card p-3.5 md:p-4 space-y-2.5 sticky bottom-24 md:bottom-4 z-30">
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <span id="pick-sum" class="font-extrabold text-sm"></span>
+        <span id="pick-price" class="font-extrabold text-brand text-base md:text-lg font-mono"></span>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <input id="cname" placeholder="Nhập tên người đặt sân" aria-label="Tên" style="flex:1;min-width:160px">
+        <button id="hold" class="btn btn-accent">🔒 Giữ chỗ & Đặt cọc VietQR</button>
+        <button id="clear" class="btn" style="border:1.5px solid var(--line)">✕ Bỏ chọn</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div id="features" class="pt-1 space-y-3.5">
+    <div class="text-center">
+      <h2 class="font-extrabold text-xl md:text-2xl">Nền tảng Cầu Lông Toàn Diện</h2>
+      <p class="text-slate-500 text-xs md:text-sm mt-0.5">Kết hợp quản lý sân thông minh và mạng xã hội kết nối VĐV cầu lông</p>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="feat-card">
+        <div class="feat-icon">⚡</div>
+        <div>
+          <div class="font-bold text-sm">Đặt sân Real-time & VietQR</div>
+          <p class="text-xs text-slate-500 mt-1">Đồng bộ tức thì qua Socket.IO, khóa slot nguyên tử chống trùng lịch và tự tạo mã QR đúng số tiền cọc.</p>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">⚔️</div>
+        <div>
+          <div class="font-bold text-sm">Tìm đối thủ & Xếp hạng ELO</div>
+          <p class="text-xs text-slate-500 mt-1">Tìm người chơi cầu lông quanh khu vực theo trình độ, lối đánh, cây vợt và gửi lời mời thách đấu Đơn/Đôi.</p>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🎓</div>
+        <div>
+          <div class="font-bold text-sm">Huấn luyện viên & Đan vợt</div>
+          <p class="text-xs text-slate-500 mt-1">Đặt lịch học kỹ thuật Footwork, Jump Smash cùng HLV chứng chỉ BWF và đặt đan cước vợt Yonex tại sân.</p>
+        </div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">🏆</div>
+        <div>
+          <div class="font-bold text-sm">Giải đấu Berger & Live BWF</div>
+          <p class="text-xs text-slate-500 mt-1">Tự động xếp lịch vòng tròn Berger, nhánh loại trực tiếp tương tác và bảng điểm trực tiếp 21 điểm.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     TAB 2: TÌM ĐỐI THỦ GẦN ĐÂY & THÁCH ĐẤU (SMASH CLUB OPPONENTS)
+     ========================================================= -->
+<section id="t-opponents" class="hidden space-y-4">
+  <!-- Header & Filters -->
+  <div class="card p-4 md:p-5 space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="font-extrabold text-xl">⚔️ Tìm kiếm đối thủ cầu lông gần đây</h2>
+          <span class="chip chip-accent text-xs">Chuẩn ELO Cầu Lông</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">Tìm VĐV cùng trình độ, xem thông số lối đánh – vợt đang dùng và gửi lời mời giao lưu / thách đấu</p>
+      </div>
+      <button id="opGeoBtn" class="btn btn-outline btn-sm">📍 Sắp xếp theo khoảng cách gần tôi</button>
+    </div>
+
+    <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+      <label>Tìm tên hoặc dòng vợt
+        <input id="op-q" placeholder="VD: Hậu, Astrox 100ZZ, Việt Trì…">
+      </label>
+      <label>Trình độ cầu lông
+        <select id="op-level">
+          <option value="">Tất cả trình độ</option>
+          <option value="Y">Y (Mới chơi)</option>
+          <option value="TB-">TB- (Trung bình yếu)</option>
+          <option value="TB">TB (Trung bình)</option>
+          <option value="TB+">TB+ (Trung bình khá)</option>
+          <option value="TBK">TBK (Khá)</option>
+          <option value="KHA">KHA (Khá cứng)</option>
+          <option value="TOT">TOT (Tốt / Giải tỉnh)</option>
+        </select>
+      </label>
+      <label>Nội dung sở trường
+        <select id="op-spec">
+          <option value="">Tất cả nội dung</option>
+          <option value="Đơn nam">Đơn nam</option>
+          <option value="Đôi nam">Đôi nam</option>
+          <option value="Đôi nam nữ">Đôi nam nữ</option>
+          <option value="Đôi nữ">Đôi nữ</option>
+          <option value="Đơn nữ">Đơn nữ</option>
+        </select>
+      </label>
+      <label>Phong cách / Lối đánh
+        <select id="op-style">
+          <option value="">Mọi lối đánh</option>
+          <option value="Chuyên công">Chuyên công / Smash</option>
+          <option value="Điều cầu">Điều cầu / Phản tạt</option>
+          <option value="Trên lưới">Trên lưới / Bắt cầu</option>
+          <option value="Toàn diện">Toàn diện (Công thủ)</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Open Challenges Board -->
+  <div class="card p-4 md:p-5 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h3 class="font-extrabold text-base">🔥 Bảng kèo thách đấu đang mở</h3>
+        <p class="text-xs text-slate-500">Các lời mời giao lưu & thách đấu Đơn/Đôi tại cụm sân Hùng Vương</p>
+      </div>
+      <span class="chip text-xs" id="ch-count">0 kèo</span>
+    </div>
+    <div id="challenges-list" class="grid md:grid-cols-2 gap-3 text-sm"></div>
+  </div>
+
+  <!-- Opponents Grid -->
+  <div id="opponents-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3.5"></div>
+</section>
+
+<!-- =========================================================
+     TAB 3: LỊCH SỬ THI ĐẤU & BẢNG XẾP HẠNG ELO (MATCH HISTORY)
+     ========================================================= -->
+<section id="t-history" class="hidden space-y-4">
+  <!-- KPI Performance Summary -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="hist-kpi"></div>
+
+  <div class="grid lg:grid-cols-12 gap-4">
+    <!-- Left 7 cols: Match History List + Record Match Form -->
+    <div class="lg:col-span-7 space-y-4">
+      <!-- Record new match -->
+      <form id="matchForm" class="card p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="font-extrabold text-base">📝 Ghi nhận kết quả trận đấu (Chuẩn BWF)</h3>
+            <p class="text-xs text-slate-500">Hệ thống tự động tính điểm ELO cộng/trừ cho VĐV sau khi lưu</p>
+          </div>
+          <button class="btn btn-primary btn-sm">+ Lưu kết quả & Cập nhật ELO</button>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-2.5 text-sm">
+          <label>Nội dung thi đấu
+            <select id="mf-type">
+              <option>Đôi nam</option>
+              <option>Đơn nam</option>
+              <option>Đôi nam nữ</option>
+              <option>Đôi nữ</option>
+              <option>Đơn nữ</option>
+            </select>
+          </label>
+          <label>Tính chất trận
+            <select id="mf-mode">
+              <option value="RANKED">Đấu hạng ELO (±16)</option>
+              <option value="FRIENDLY">Giao lưu (±8)</option>
+              <option value="TOURNAMENT">Giải đấu (±22)</option>
+            </select>
+          </label>
+          <label>Sân & Số quả cầu
+            <div class="flex gap-1.5 mt-1">
+              <select id="mf-court" style="width:55%">
+                <option value="1">Sân 1</option><option value="2">Sân 2</option><option value="3">Sân 3</option>
+                <option value="4">Sân 4</option><option value="5">Sân 5</option><option value="6">Sân 6</option>
+              </select>
+              <input id="mf-shuttles" type="number" min="1" max="20" value="2" title="Số quả cầu sử dụng" style="width:45%">
+            </div>
+          </label>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-2.5">
+          <label>Đội A (VĐV 1 / VĐV 2)
+            <input id="mf-a" placeholder="VD: Ngô Đình Hậu / Trần Hồng Đức" required>
+          </label>
+          <label>Đội B (VĐV 1 / VĐV 2)
+            <input id="mf-b" placeholder="VD: Đinh Thanh Hải / Xuân Dương" required>
+          </label>
+        </div>
+        <div class="grid grid-cols-3 gap-2.5">
+          <label>Ván 1 (A – B)
+            <div class="flex items-center gap-1 mt-1">
+              <input id="mf-s1a" type="number" min="0" max="30" value="21" required>
+              <span class="font-bold">–</span>
+              <input id="mf-s1b" type="number" min="0" max="30" value="18" required>
+            </div>
+          </label>
+          <label>Ván 2 (A – B)
+            <div class="flex items-center gap-1 mt-1">
+              <input id="mf-s2a" type="number" min="0" max="30" value="21">
+              <span class="font-bold">–</span>
+              <input id="mf-s2b" type="number" min="0" max="30" value="16">
+            </div>
+          </label>
+          <label>Ván 3 (nếu có)
+            <div class="flex items-center gap-1 mt-1">
+              <input id="mf-s3a" type="number" min="0" max="30" placeholder="0">
+              <span class="font-bold">–</span>
+              <input id="mf-s3b" type="number" min="0" max="30" placeholder="0">
+            </div>
+          </label>
+        </div>
+      </form>
+
+      <!-- Match history list -->
+      <div class="card p-4 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="font-extrabold text-base">🕒 Lịch sử các trận cầu lông gần đây</h3>
+          <div class="flex items-center gap-2">
+            <select id="mh-filter" style="width:auto" class="text-xs">
+              <option value="">Tất cả nội dung</option>
+              <option>Đôi nam</option>
+              <option>Đơn nam</option>
+              <option>Đôi nam nữ</option>
+              <option>Đôi nữ</option>
+              <option>Đơn nữ</option>
+            </select>
+          </div>
+        </div>
+        <div id="matches-list" class="space-y-2.5 text-sm"></div>
+      </div>
+    </div>
+
+    <!-- Right 5 cols: ELO Leaderboard -->
+    <div class="lg:col-span-5 space-y-4">
+      <div class="card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-extrabold text-base">🏅 Bảng xếp hạng ELO Cầu Lông</h3>
+            <p class="text-xs text-slate-500">Xếp hạng VĐV xuất sắc tại cụm sân Phú Thọ</p>
+          </div>
+          <span class="chip text-xs">Mùa giải 2026</span>
+        </div>
+        <div id="leaderboard-list" class="space-y-2 text-sm"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     TAB 4: TÌM HUẤN LUYỆN VIÊN CẦU LÔNG (BADMINTON COACHES)
+     ========================================================= -->
+<section id="t-coaches" class="hidden space-y-4">
+  <div class="card p-4 md:p-5 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="font-extrabold text-xl">🎓 Đội ngũ Huấn luyện viên Cầu lông</h2>
+        <span class="chip text-xs">Chứng chỉ BWF & Kiện tướng</span>
+      </div>
+      <p class="text-xs text-slate-500 mt-0.5">Đăng ký học kèm 1-1 hoặc ghép nhóm nâng cao bộ chân (Footwork), kỹ thuật đập cầu (Jump Smash) và chiến thuật đánh đôi</p>
+    </div>
+    <div class="flex flex-wrap gap-2 items-center">
+      <select id="coach-filter" style="width:auto">
+        <option value="">Tất cả chuyên môn</option>
+        <option value="Cơ bản">Cơ bản cho người mới</option>
+        <option value="Bộ chân">Bộ chân (Footwork)</option>
+        <option value="Đập cầu">Kỹ thuật Đập cầu (Smash)</option>
+        <option value="Phản tạt">Phòng thủ & Phản tạt</option>
+        <option value="Đôi">Chiến thuật Đánh đôi</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Coaches Grid -->
+  <div id="coaches-grid" class="grid md:grid-cols-3 gap-4"></div>
+
+  <!-- Recent Coach Bookings -->
+  <div class="card p-4 space-y-3">
+    <h3 class="font-extrabold text-base">📅 Lịch đăng ký học cầu lông gần đây</h3>
+    <div id="coach-bookings-list" class="grid md:grid-cols-2 gap-2.5 text-sm"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     TAB 5: CỦA TÔI (MY PROFILE & BOOKINGS)
+     ========================================================= -->
+<section id="t-my" class="hidden space-y-4">
+  <div class="card p-4 md:p-5 flex flex-wrap justify-between gap-4 items-center">
+    <div class="flex gap-4 items-center">
+      <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-mid to-brand font-extrabold text-white text-2xl grid place-items-center shrink-0" id="my-avatar">?</div>
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide font-bold">Hồ sơ thành viên</div>
+        <div id="my-name" class="font-extrabold text-xl mt-0.5"></div>
+        <div id="my-role-chip" class="mt-1"></div>
+      </div>
+    </div>
+    <div class="text-right">
+      <div class="text-xs text-slate-500 uppercase tracking-wide font-bold">Điểm tích lũy</div>
+      <div id="my-pts" class="font-extrabold text-3xl text-brand mt-0.5 font-mono"></div>
+      <div class="text-xs text-slate-500 mt-0.5">Tặng 1 điểm cho mỗi 10.000đ chi tiêu</div>
+    </div>
+  </div>
+  <div class="font-extrabold text-base">📅 Lịch đặt sân của tôi</div>
+  <div id="my-list" class="space-y-2.5"></div>
+</section>
+
+<!-- =========================================================
+     TAB 6: QUẢN TRỊ (ADMIN / STAFF)
+     ========================================================= -->
+<section id="t-admin" class="hidden space-y-4">
+  <!-- KPI -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="kpi"></div>
+  <!-- Charts -->
+  <div class="grid md:grid-cols-2 gap-3" id="charts"></div>
+
+  <!-- Settings -->
+  <form id="settings" class="hidden card p-4 space-y-3">
+    <div class="flex items-center justify-between">
+      <h3 class="font-extrabold text-base">⚙️ Cấu hình sân & bảng giá</h3>
+      <button class="btn btn-primary btn-sm">Lưu cấu hình</button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm items-end">
+      <label>Số sân<input id="s-courts" type="number" min="1" max="12"></label>
+      <label>Giá thường (đ/h)<input id="s-off" type="number" min="0" step="1000"></label>
+      <label>Giá cao điểm<input id="s-peak" type="number" min="0" step="1000"></label>
+      <label>Cao điểm từ (giờ)<input id="s-from" type="number" min="6" max="22"></label>
+      <label>Cuối tuần +%<input id="s-wk" type="number" min="0" max="200"></label>
+      <label>Đặt cọc %<input id="s-dep" type="number" min="0" max="100"></label>
+    </div>
+  </form>
+
+  <!-- Admin grid -->
+  <div class="card p-3.5 md:p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+      <h3 class="font-extrabold text-base">🗓 Sơ đồ điều phối sân (Kéo thả để đổi sân/giờ)</h3>
+      <span class="text-xs text-slate-500">Kéo ô đã đặt sang ô trống để đổi lịch và tự tính tiền chênh lệch</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table id="grid-admin"></table>
+    </div>
+  </div>
+
+  <!-- Contracts + Orders -->
+  <div class="grid lg:grid-cols-2 gap-4">
+    <!-- Contracts -->
+    <div class="card p-4 space-y-3">
+      <div class="flex flex-wrap justify-between items-center gap-2">
+        <h3 class="font-extrabold text-base">📋 Hợp đồng khách cố định theo tháng/quý</h3>
+        <button id="export" class="btn btn-outline btn-sm hidden">⬇ Xuất báo cáo CSV</button>
+      </div>
+      <form id="ctForm" class="hidden space-y-2 text-sm">
+        <div class="grid sm:grid-cols-2 gap-2">
+          <input id="ct-name" placeholder="Tên khách / CLB cố định" required>
+          <select id="ct-court"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <label>Từ giờ<input id="ct-from" type="time" step="1800" value="18:00" required></label>
+          <label>Đến giờ<input id="ct-to" type="time" step="1800" value="20:00" required></label>
+        </div>
+        <input id="ct-deposit" type="number" min="0" placeholder="Tiền cọc hợp đồng (đ)" class="w-full">
+        <div class="flex flex-wrap gap-1.5" id="ct-days"></div>
+        <div class="grid grid-cols-2 gap-2">
+          <label>Từ ngày<input id="ct-vf" type="date" required></label>
+          <label>Đến ngày<input id="ct-vt" type="date" required></label>
+        </div>
+        <button class="btn btn-primary w-full">📌 Tạo hợp đồng & khóa lịch tự động</button>
+      </form>
+      <div id="contracts" class="space-y-2 text-sm"></div>
+    </div>
+
+    <!-- Orders -->
+    <div class="card p-4 space-y-3">
+      <h3 class="font-extrabold text-base">🧾 Đơn đặt sân & Bán hàng POS</h3>
+      <div id="orders" class="space-y-2 text-sm max-h-[26rem] overflow-y-auto pr-1"></div>
+    </div>
+  </div>
+
+  <!-- Inventory + Audit -->
+  <div class="grid lg:grid-cols-2 gap-4">
+    <div class="card p-4">
+      <h3 class="font-extrabold text-base mb-3">📦 Kho phụ kiện & Nước giải khát</h3>
+      <div id="inv" class="text-sm"></div>
+    </div>
+    <div class="card p-4">
+      <h3 class="font-extrabold text-base mb-3">📜 Nhật ký thao tác nhạy cảm</h3>
+      <div id="audit" class="text-xs space-y-1.5 max-h-48 overflow-y-auto"></div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================================================
+     TAB 7: GIẢI ĐẤU (TOURNAMENTS & LIVE SCORE)
+     ========================================================= -->
+<section id="t-tour" class="space-y-4">
+  <div class="card p-4 space-y-3">
+    <h3 class="font-extrabold text-base">🏆 Tổ chức giải đấu & Xếp lịch tự động</h3>
+    <div class="flex flex-wrap gap-3 items-end">
+      <label style="flex:none">Thể thức thi đấu
+        <select id="tf">
+          <option value="roundrobin">Vòng tròn (Thuật toán Berger)</option>
+          <option value="knockout">Loại trực tiếp (Nhánh đấu)</option>
+          <option value="group">Chia bảng + Vòng tròn Berger</option>
+        </select>
+      </label>
+      <label style="flex:none">Số đội/VĐV<input id="tn" type="number" min="2" max="16" value="6" style="width:80px"></label>
+      <label style="flex:none">Số sân<input id="tc" type="number" min="1" max="6" value="2" style="width:75px"></label>
+      <button id="tgo" class="btn btn-primary">▶ Tạo lịch thi đấu</button>
+      <button id="tsave" class="btn btn-outline hidden">💾 Lưu giải đấu</button>
+    </div>
+  </div>
+
+  <div id="tsaved" class="card p-4 text-sm hidden"></div>
+
+  <div id="tout" class="card p-4 text-sm overflow-x-auto">
+    <p class="text-slate-400">Chọn thể thức rồi bấm "Tạo lịch thi đấu".</p>
+  </div>
+
+  <!-- Live score management -->
+  <div class="card p-4 space-y-3">
+    <div class="flex flex-wrap justify-between items-center gap-2">
+      <div>
+        <h3 class="font-extrabold text-base">📺 Trận cầu đang diễn ra (Live Scoreboard)</h3>
+        <p class="text-xs text-slate-500">Đồng bộ trực tiếp lên màn hình TV khán giả theo luật BWF 21 điểm</p>
+      </div>
+      <a href="/live.html" target="_blank" class="btn btn-soft btn-sm">🔗 Mở màn hình TV khán giả ↗</a>
+    </div>
+    <form id="liveForm" class="hidden flex flex-wrap gap-2 items-end">
+      <label style="flex:1;min-width:140px">Đội A<input id="lv-a" placeholder="Tên VĐV / Đôi A" required></label>
+      <label style="flex:1;min-width:140px">Đội B<input id="lv-b" placeholder="Tên VĐV / Đôi B" required></label>
+      <label style="flex:none">Sân số<input id="lv-c" type="number" min="1" value="1" style="width:68px"></label>
+      <button class="btn btn-primary">▶ Bắt đầu trận</button>
+    </form>
+    <div id="lives" class="space-y-2.5"></div>
+  </div>
+
+  <!-- Manual BWF Scoreboard -->
+  <div class="card p-4 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <h3 class="font-extrabold text-base">🎯 Bảng bấm điểm trọng tài tại sân (BWF 21 điểm, chạm 30, thắng 2/3 ván)</h3>
+      <span class="chip text-xs">💾 Tự động lưu tỉ số khi tải lại trang (F5)</span>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <div class="flex items-center gap-1.5">
+        <button id="ma" class="btn !bg-slate-200 dark:!bg-slate-700 !text-slate-800 dark:!text-white px-3.5 py-3 text-base" title="Trừ 1 điểm Đội A khi bấm nhầm">− 1</button>
+        <button id="pa" class="btn !bg-blue-600 !text-white px-6 py-3 text-base">+ Điểm Đội A</button>
+      </div>
+      <div id="score" class="text-4xl font-mono font-extrabold text-center min-w-[7.5rem]">0 – 0</div>
+      <div class="flex items-center gap-1.5">
+        <button id="pb" class="btn !bg-red-500 !text-white px-6 py-3 text-base">+ Điểm Đội B</button>
+        <button id="mb" class="btn !bg-slate-200 dark:!bg-slate-700 !text-slate-800 dark:!text-white px-3.5 py-3 text-base" title="Trừ 1 điểm Đội B khi bấm nhầm">− 1</button>
+      </div>
+      <button id="preset" class="btn" style="border:1.5px solid var(--line)">🔄 Làm lại (0–0)</button>
+    </div>
+    <div id="sc-sum" class="text-sm text-slate-500 font-medium"></div>
+  </div>
+</section>
+
+<!-- =========================================================
+     TAB 8: GIAO LƯU, CLB CẦU LÔNG & ĐAN VỢT (SOCIAL & CLUBS)
+     ========================================================= -->
+<section id="t-social" class="hidden space-y-4">
+  <!-- Tuyển giao lưu vãng lai -->
+  <div class="card p-4 space-y-3">
+    <div class="flex flex-wrap justify-between items-center gap-2">
+      <div>
+        <h3 class="font-extrabold text-base">🤝 Tuyển giao lưu vãng lai (Xé vé theo buổi)</h3>
+        <p class="text-xs text-slate-500">Đăng tin tìm người ghép sân, hệ thống tự động chia đều chi phí sân & cầu trên đầu người</p>
+      </div>
+      <div class="flex items-center gap-2 text-sm">
+        <span class="text-xs font-semibold text-slate-500">Trình độ:</span>
+        <select id="po-filter" style="width:auto"></select>
+      </div>
+    </div>
+    <form id="postForm" class="hidden space-y-2.5">
+      <div class="grid sm:grid-cols-2 gap-2.5">
+        <label>Tiêu đề kèo giao lưu
+          <input id="po-title" placeholder="VD: Cần 2 bạn TB+ giao lưu tối T6 Sân 2" required maxlength="120">
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <label>Trình độ yêu cầu<select id="po-level"></select></label>
+          <label>Số chỗ cần tuyển<input id="po-slots" type="number" min="1" max="20" value="2"></label>
+        </div>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-2.5">
+        <label>Tổng chi phí dự kiến (sân + cầu)<input id="po-fee" type="number" min="0" step="1000" value="200000" required></label>
+        <label>Thời gian bắt đầu<input id="po-at" type="datetime-local" required></label>
+      </div>
+      <button class="btn btn-primary w-full">📢 Đăng tin tuyển giao lưu</button>
+    </form>
+    <p id="po-login" class="text-xs text-slate-500 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl">💡 Hãy đăng nhập tài khoản để đăng bài tuyển thành viên hoặc bấm tham gia kèo.</p>
+    <div id="posts" class="space-y-2.5 text-sm"></div>
+  </div>
+
+  <!-- CLB Cầu lông sinh hoạt định kỳ (Smash Club Groups) -->
+  <div class="card p-4 space-y-3">
+    <div>
+      <h3 class="font-extrabold text-base">🏸 Câu lạc bộ Cầu lông sinh hoạt định kỳ</h3>
+      <p class="text-xs text-slate-500">Tham gia các hội nhóm cố định tại cụm sân để duy trì phong độ hằng tuần</p>
+    </div>
+    <div id="clubs-list" class="grid md:grid-cols-3 gap-3 text-sm"></div>
+  </div>
+
+  <!-- Matchmaking + Dịch vụ Đan cước vợt -->
+  <div class="grid lg:grid-cols-2 gap-4">
+    <!-- Matchmaking -->
+    <div class="card p-4 space-y-3">
+      <div>
+        <h3 class="font-extrabold text-base">⚖️ Thuật toán ghép cặp đôi cân bằng</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Ưu tiên 4 người chơi ít trận nhất và chia 2 đôi có tổng điểm trình độ cân bằng nhất.</p>
+      </div>
+      <div id="players" class="grid sm:grid-cols-2 gap-2"></div>
+      <button id="mm" class="btn btn-primary w-full">⚖ Chia 2 đôi cân bằng</button>
+      <div id="mm-out" class="mt-1 text-sm"></div>
+    </div>
+
+    <!-- Dịch vụ Đan & Căng cước vợt tại sân -->
+    <div class="card p-4 space-y-3">
+      <div>
+        <h3 class="font-extrabold text-base">🧵 Dịch vụ Đan & Căng cước vợt chuẩn điện tử</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Máy căng điện tử chính xác từng 0.5 lbs/kg · Đan 4 nút chuẩn Yonex nhận ngay tại sân</p>
+      </div>
+      <form id="stringForm" class="space-y-2.5 text-sm">
+        <div class="grid sm:grid-cols-2 gap-2">
+          <label>Tên khách hàng<input id="st-name" placeholder="Nhập họ tên" required></label>
+          <label>Dòng vợt của bạn<input id="st-racket" placeholder="VD: Yonex Astrox 88D Pro" required></label>
+        </div>
+        <div class="grid sm:grid-cols-3 gap-2">
+          <label>Loại cước đan
+            <select id="st-string">
+              <option value="Yonex BG65">Yonex BG65 (140k)</option>
+              <option value="Yonex BG65 Titanium" selected>Yonex BG65 Ti (160k)</option>
+              <option value="Yonex BG80 Power">Yonex BG80 Power (195k)</option>
+              <option value="Yonex Exbolt 63">Yonex Exbolt 63 (210k)</option>
+              <option value="Yonex Exbolt 65">Yonex Exbolt 65 (210k)</option>
+              <option value="Yonex Aerobite">Yonex Aerobite (230k)</option>
+              <option value="Lining No.1">Lining No.1 (165k)</option>
+            </select>
+          </label>
+          <label>Số kg căng (9.0–13.5kg)
+            <input id="st-kg" type="number" step="0.5" min="9" max="13.5" value="11.0" required>
+          </label>
+          <label>Kiểu đan
+            <select id="st-pat">
+              <option>4 nút chuẩn Yonex</option>
+              <option>2 nút truyền thống</option>
+            </select>
+          </label>
+        </div>
+        <button class="btn btn-accent w-full">🏸 Đặt lịch đan cước vợt</button>
+      </form>
+      <div id="string-orders" class="space-y-1.5 text-xs max-h-40 overflow-y-auto"></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ===== FOOTER ===== -->
+<footer class="mt-10">
+  <div class="max-w-6xl mx-auto px-4 py-10 grid md:grid-cols-3 gap-8">
+    <div class="space-y-2.5">
+      <div class="flex items-center gap-2.5 font-extrabold text-white text-lg">
+        <div class="logo-wrap">🏸</div>
+        CầuLông Pro
+      </div>
+      <p class="text-sm leading-relaxed">Nền tảng đặt lịch sân cầu lông trực tuyến, kết nối đối thủ ELO, đặt lịch huấn luyện viên và quản lý giải đấu toàn diện.</p>
+      <a href="/live.html" class="inline-flex items-center gap-1.5 text-sm font-bold text-amber-300 mt-1">📺 Mở màn hình Bảng điểm trực tiếp BWF ↗</a>
+    </div>
+    <div class="space-y-2">
+      <div class="font-extrabold text-white text-xs uppercase tracking-wider">Nhóm thực hiện – K22-CNTT B</div>
+      <ul class="text-sm space-y-1 opacity-90 font-medium">
+        <li>• Ngô Đình Hậu</li>
+        <li>• Trần Hồng Đức</li>
+        <li>• Đinh Thanh Hải</li>
+        <li>• Nguyễn Đinh Xuân Dương</li>
+        <li>• Nguyễn Bảo Long</li>
+      </ul>
+    </div>
+    <div class="space-y-2">
+      <div class="font-extrabold text-white text-xs uppercase tracking-wider">Trường Đại học Hùng Vương</div>
+      <p class="text-sm opacity-90">Khoa Kỹ thuật – Công nghệ, Thành phố Việt Trì, Tỉnh Phú Thọ.</p>
+      <div class="text-xs opacity-70 pt-2">
+        Công nghệ: Node.js 24 · SQLite WAL · Express · Socket.IO · VietQR · Be Vietnam Pro Design System
+      </div>
+    </div>
+  </div>
+  <div class="border-t border-white/10 text-center text-xs opacity-60 py-4">
+    © 2026 CầuLông Pro · K22-CNTT B · Trường Đại học Hùng Vương, Phú Thọ
+  </div>
+</footer>
+
+<!-- Mobile bottom nav -->
+<nav id="bottomnav" class="md:hidden fixed bottom-0 inset-x-0 flex z-40" aria-label="Điều hướng di động"></nav>
+
+<!-- ===== MODALS ===== -->
+<!-- VietQR Payment modal -->
+<div id="modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" aria-label="Thanh toán đặt cọc">
+  <div class="card max-w-sm w-full p-5 space-y-3 text-center">
+    <div class="flex justify-center gap-1.5 text-xs mb-1">
+      <span class="px-3 py-1 rounded-full bg-green-600 text-white font-bold">1 Chọn sân</span>
+      <span class="px-3 py-1 rounded-full bg-green-600 text-white font-bold">2 Giữ chỗ</span>
+      <span class="px-3 py-1 rounded-full bg-brand text-white font-bold">3 Đặt cọc</span>
+    </div>
+    <h3 class="font-extrabold text-lg">💳 Quét mã VietQR đặt cọc</h3>
+    <div class="bg-white rounded-xl p-2 inline-block mx-auto shadow-sm border">
+      <img id="qr" class="w-52 h-52 object-contain" alt="Mã VietQR">
+    </div>
+    <p id="m-info" class="text-sm bg-slate-50 dark:bg-slate-800 rounded-xl p-3 text-left leading-relaxed"></p>
+    <div class="flex items-center justify-center gap-2 text-sm">
+      <span class="w-2.5 h-2.5 bg-amber-400 rounded-full pulse"></span>
+      Thời gian giữ chỗ còn: <b id="cd" class="text-red-500 ml-1 font-mono">10:00</b>
+    </div>
+    <button id="simpay" class="btn btn-primary w-full">✅ Mô phỏng: Đã chuyển khoản</button>
+    <button id="mclose" class="btn w-full" style="border:1.5px solid var(--line)">Đóng</button>
+  </div>
+</div>
+
+<!-- Challenge Opponent Modal -->
+<div id="challengeModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
+  <form id="challengeForm" class="card max-w-md w-full p-5 space-y-3">
+    <div class="flex justify-between items-center">
+      <h3 class="font-extrabold text-lg">⚔️ Gửi lời mời Thách đấu / Giao lưu</h3>
+      <button type="button" onclick="$('#challengeModal').classList.add('hidden')" class="iconbtn !w-8 !h-8">✕</button>
+    </div>
+    <div id="ch-target-info" class="text-sm bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl font-medium"></div>
+    <input type="hidden" id="ch-op-id">
+    <label id="ch-name-wrap">Tên của bạn / Đội của bạn
+      <input id="ch-from-name" placeholder="Nhập họ tên VĐV thách đấu" required>
+    </label>
+    <div class="grid grid-cols-2 gap-2.5">
+      <label>Nội dung thi đấu
+        <select id="ch-type">
+          <option>Đơn nam</option>
+          <option>Đôi nam</option>
+          <option>Đôi nam nữ</option>
+          <option>Đôi nữ</option>
+          <option>Đơn nữ</option>
+        </select>
+      </label>
+      <label>Chọn sân
+        <select id="ch-court">
+          <option value="1">Sân 1</option><option value="2">Sân 2</option><option value="3">Sân 3</option>
+          <option value="4">Sân 4</option><option value="5">Sân 5</option><option value="6">Sân 6</option>
+        </select>
+      </label>
+    </div>
+    <div class="grid grid-cols-2 gap-2.5">
+      <label>Ngày thi đấu
+        <input id="ch-date" type="date" required>
+      </label>
+      <label>Khung giờ
+        <select id="ch-time">
+          <option>17:30 – 19:00</option>
+          <option selected>18:30 – 20:00</option>
+          <option>19:30 – 21:00</option>
+          <option>06:00 – 07:30</option>
+        </select>
+      </label>
+    </div>
+    <label>Thể thức / Kèo cầu
+      <input id="ch-shuttle" value="Đấu 3 ván 21 điểm · Chia tiền sân & cầu Hải Yến">
+    </label>
+    <label>Lời nhắn cho đối thủ
+      <input id="ch-msg" placeholder="VD: Giao lưu học hỏi cuối tuần nhé!">
+    </label>
+    <div class="flex gap-2 pt-1">
+      <button class="btn btn-accent flex-1">⚡ Gửi lời thách đấu</button>
+      <button type="button" onclick="$('#challengeModal').classList.add('hidden')" class="btn" style="border:1.5px solid var(--line)">Hủy</button>
+    </div>
+  </form>
+</div>
+
+<!-- Coach Booking Modal -->
+<div id="coachModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
+  <form id="coachBookForm" class="card max-w-md w-full p-5 space-y-3">
+    <div class="flex justify-between items-center">
+      <h3 class="font-extrabold text-lg">🎓 Đăng ký học cùng Huấn luyện viên</h3>
+      <button type="button" onclick="$('#coachModal').classList.add('hidden')" class="iconbtn !w-8 !h-8">✕</button>
+    </div>
+    <div id="cb-coach-info" class="text-sm bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl font-medium"></div>
+    <input type="hidden" id="cb-coach-id">
+    <div class="grid sm:grid-cols-2 gap-2.5">
+      <label>Họ tên học viên
+        <input id="cb-name" placeholder="Nhập họ tên" required>
+      </label>
+      <label>Số điện thoại liên hệ
+        <input id="cb-phone" placeholder="09xxxxxxxx" required>
+      </label>
+    </div>
+    <label>Hình thức lớp học
+      <select id="cb-type">
+        <option value="1ON1">Kèm riêng 1-1 (Chỉnh kỹ thuật chuyên sâu)</option>
+        <option value="GROUP">Ghép nhóm 2–4 học viên (Tiết kiệm chi phí)</option>
+      </select>
+    </label>
+    <div class="grid grid-cols-2 gap-2.5">
+      <label>Ngày bắt đầu tập
+        <input id="cb-date" type="date" required>
+      </label>
+      <label>Khung giờ đăng ký
+        <select id="cb-slot">
+          <option>06:00 – 07:30</option>
+          <option>08:00 – 09:30</option>
+          <option selected>17:30 – 19:00</option>
+          <option>19:00 – 20:30</option>
+        </select>
+      </label>
+    </div>
+    <label>Mục tiêu luyện tập
+      <input id="cb-note" placeholder="VD: Muốn chỉnh bộ chân và kỹ thuật đập cầu cuối sân">
+    </label>
+    <div class="flex gap-2 pt-1">
+      <button class="btn btn-primary flex-1">✅ Xác nhận đăng ký học</button>
+      <button type="button" onclick="$('#coachModal').classList.add('hidden')" class="btn" style="border:1.5px solid var(--line)">Hủy</button>
+    </div>
+  </form>
+</div>
+
+<!-- Login modal -->
+<div id="loginModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
+  <form id="authForm" class="card max-w-sm w-full p-5 space-y-3">
+    <h3 class="font-extrabold text-xl" id="authTitle">Đăng nhập</h3>
+    <input id="aname" placeholder="Họ và tên đầy đủ" class="hidden" autocomplete="name">
+    <input id="aphone" placeholder="Số điện thoại (10 chữ số)" inputmode="numeric" autocomplete="tel" required>
+    <input id="apass" type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" autocomplete="current-password" required>
+    <button class="btn btn-primary w-full text-sm" id="authGo">Đăng nhập</button>
+    <button type="button" id="authSwitch" class="w-full text-xs text-brand font-bold py-1">Chưa có tài khoản? Đăng ký ngay</button>
+    <button type="button" id="authClose" class="btn w-full text-xs" style="border:1.5px solid var(--line)">Đóng</button>
+    <div class="text-xs text-slate-500 bg-slate-50 dark:bg-slate-800 rounded-xl p-3 leading-relaxed">
+      <b class="text-slate-700 dark:text-slate-200">Tài khoản Demo quản lý sân:</b><br>
+      • Thu ngân: <code>0900000003</code> / <code>cashier123</code><br>
+      • Quản lý: <code>0900000002</code> / <code>manager123</code><br>
+      • Chủ sân: <code>0900000001</code> / <code>admin123</code>
+    </div>
+  </form>
+</div>
+
+<!-- Notification modal -->
+<div id="notifModal" class="hidden fixed inset-0 bg-black/40 flex items-start justify-end p-4 z-50" role="dialog" aria-label="Thông báo">
+  <div class="card max-w-sm w-full p-4 shadow-xl mt-14">
+    <div class="flex justify-between items-center mb-3">
+      <b class="font-extrabold text-sm">🔔 Thông báo của bạn</b>
+      <button id="notifClose" class="iconbtn !w-8 !h-8 text-sm">✕</button>
+    </div>
+    <div id="notifList" class="space-y-2 text-sm max-h-80 overflow-y-auto"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-24 md:bottom-4 right-4 bg-slate-800 text-white px-4 py-2.5 rounded-2xl hidden z-[60] max-w-xs" role="status"></div>
+
+<script src="/standalone.js"></script>
+<script src="/app.js"></script>
+<script src="/extra.js"></script>
+</body>
+</html>

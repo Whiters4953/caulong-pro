@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hóa đơn thanh toán – CầuLông Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;font-family:'Be Vietnam Pro',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  body{background:#f1f5f9;margin:0;padding:24px 12px;color:#0f172a;-webkit-font-smoothing:antialiased}
+  .paper{max-width:390px;margin:0 auto;background:#fff;border-radius:18px;padding:26px 22px;box-shadow:0 12px 32px -10px rgba(15,23,42,.18);border:1px solid #e2e8f0}
+  h1{font-size:20px;text-align:center;margin:0 0 4px;font-weight:800;color:#0f766e}
+  .c{text-align:center;font-size:12px;color:#64748b;line-height:1.55}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+  td{padding:5px 0}
+  .r{text-align:right;font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums}
+  hr{border:0;border-top:1px dashed #cbd5e1;margin:12px 0}
+  .tot td{font-weight:800;font-size:15px;padding-top:6px}
+  .due td{color:#0f766e;font-size:16px}
+  .actions{max-width:390px;margin:14px auto 0;display:flex;gap:8px}
+  button,a.btn{flex:1;padding:10px 14px;border-radius:10px;border:0;font-weight:700;font-size:13px;cursor:pointer;text-align:center;text-decoration:none}
+  .pri{background:#0f766e;color:#fff}
+  .sec{background:#fff;color:#0f172a;border:1px solid #cbd5e1}
+  @media print{body{background:#fff;padding:0}.paper{box-shadow:none;border:0;max-width:100%}.actions{display:none}}
+</style>
+</head>
+<body>
+<div class="paper" id="out">Đang tải hóa đơn…</div>
+<div class="actions">
+  <button class="pri" onclick="print()">🖨 In hóa đơn</button>
+  <a class="btn sec" href="/">← Về trang chủ</a>
+</div>
+<script src="/standalone.js"></script>
+<script>
+const fmt=n=>Math.round(n).toLocaleString('vi-VN')+'đ';
+const lab=s=>`${String(6+Math.floor(s/2)).padStart(2,'0')}:${s%2?'30':'00'}`;
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+(async()=>{
+  const code=new URLSearchParams(location.search).get('code');
+  const r=await fetch('/api/invoice/'+encodeURIComponent(code),{headers:{Authorization:'Bearer '+localStorage.getItem('token')}});
+  if(!r.ok){out.textContent='Không có quyền hoặc không tìm thấy hóa đơn (hãy đăng nhập tài khoản nhân viên).';return}
+  const b=await r.json(), goods=b.items.reduce((s,i)=>s+i.qty*i.price,0), total=b.amount+goods;
+  out.innerHTML=`<h1>🏸 CẦULÔNG PRO</h1>
+  <div class="c">Cụm sân Cầu Lông Hùng Vương · Việt Trì, Phú Thọ<br>Hóa đơn <b>#${esc(b.code)}</b> · ${new Date(b.printedAt).toLocaleString('vi-VN')}<br>Thu ngân: ${esc(b.cashier)}</div><hr>
+  <div style="font-size:13px;line-height:1.6">Khách hàng: <b>${esc(b.name)}</b><br>Lịch sân: <b>Sân ${b.court}</b> · ${lab(b.from)}–${lab(b.to)} (${b.date})</div><hr>
+  <table>
+    <tr><td>Tiền giờ sân</td><td class="r">${fmt(b.amount)}</td></tr>
+    ${b.items.map(i=>`<tr><td>${esc(i.name)} ×${i.qty}</td><td class="r">${fmt(i.qty*i.price)}</td></tr>`).join('')}
+    <tr><td colspan="2"><hr></td></tr>
+    <tr class="tot"><td>TỔNG CỘNG</td><td class="r">${fmt(total)}</td></tr>
+    <tr><td>Đã đặt cọc</td><td class="r">−${fmt(b.deposit)}</td></tr>
+    <tr class="tot due"><td>CẦN THANH TOÁN</td><td class="r">${fmt(Math.max(0,total-b.deposit))}</td></tr>
+  </table>
+  <hr><div class="c">Cảm ơn quý khách – Hẹn gặp lại tại sân!</div>`;
+})();
+</script>
+</body>
+</html>
