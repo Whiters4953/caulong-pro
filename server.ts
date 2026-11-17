@@ -5,7 +5,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs from 'node:fs';
+import { existsSync } from 'fs';
 
 
 // ==== booking/pricing.ts ====
@@ -192,7 +192,9 @@ function subPoint(s: ScoreState, side: 'A' | 'B'): ScoreState {
 // Server hoàn thiện: SQLite bền vững + đăng nhập + phân quyền + đặt sân + POS + giải đấu.
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
-const db = new DatabaseSync(process.env.DB_FILE ?? path.join(DIR, '../../data.sqlite'));
+const WEB_DIR = [path.join(DIR, 'web'), path.join(DIR, '../../web'), DIR].find(p => existsSync(path.join(p, 'index.html'))) ?? path.join(DIR, 'web');
+const DEFAULT_DB = existsSync(path.join(DIR, '../../web/index.html')) ? path.join(DIR, '../../data.sqlite') : path.join(DIR, 'data.sqlite');
+const db = new DatabaseSync(process.env.DB_FILE ?? DEFAULT_DB);
 db.exec(`
 PRAGMA journal_mode=WAL;
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT, phone TEXT UNIQUE, pass TEXT, role TEXT DEFAULT 'PLAYER', points INTEGER DEFAULT 0);
@@ -257,7 +259,8 @@ app.use('/api/register', limit('register', Number(process.env.RATE_LOGIN ?? 40))
 app.use('/api/hold', limit('hold', Number(process.env.RATE_HOLD ?? 200)));
 const http = createServer(app);
 const io = new Server(http);
-app.use(express.static(path.join(DIR, '../../web'), { extensions: ['html'] }));
+app.use(express.static(WEB_DIR, { extensions: ['html'] }));
+app.get('/', (_req, res) => res.sendFile(path.join(WEB_DIR, 'index.html')));
 const push = () => io.emit('changed');
 
 const slotDate = (date: string, s: number) =>
