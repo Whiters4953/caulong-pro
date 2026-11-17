@@ -1,8 +1,18 @@
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { DatabaseSync } from 'node:sqlite';
+import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
+import { fileURLToPath } from 'url';
+import path from 'path';
 import fs from 'node:fs';
-// Tính tiền động: tách đoạn giờ theo từng khung giá (thường -> cao điểm), block 15 phút
-export interface Rule { startMin: number; endMin: number; perHour: number }
 
-export function priceRange(start: Date, end: Date, rules: Rule[]) {
+
+// ==== booking/pricing.ts ====
+// Tính tiền động: tách đoạn giờ theo từng khung giá (thường -> cao điểm), block 15 phút
+interface Rule { startMin: number; endMin: number; perHour: number }
+
+function priceRange(start: Date, end: Date, rules: Rule[]) {
   let total = 0;
   for (let t = start.getTime(); t < end.getTime(); t += 15 * 60000) {
     const d = new Date(t);
@@ -14,10 +24,11 @@ export function priceRange(start: Date, end: Date, rules: Rule[]) {
   return Math.round(total);
 }
 
+// ==== tournament/berger.ts ====
 // Vòng tròn Berger (circle method): N đội -> N-1 lượt (N chẵn), tổng M = N(N-1)/2 trận.
-export interface Pairing { round: number; a: number | null; b: number | null }
+interface Pairing { round: number; a: number | null; b: number | null }
 
-export function berger(teams: number[]): Pairing[] {
+function berger(teams: number[]): Pairing[] {
   const list: (number | null)[] = [...teams];
   if (list.length % 2) list.push(null);           // null = bye
   const n = list.length;
@@ -35,8 +46,8 @@ export function berger(teams: number[]): Pairing[] {
 }
 
 // Xếp trận lên nhiều sân; VĐV (có thể thuộc nhiều nội dung) không bị trùng khung giờ.
-export interface M { id: string; players: string[]; round: number }
-export function schedule(matches: M[], courts: number, slotMin: number, start: Date) {
+interface M { id: string; players: string[]; round: number }
+function schedule(matches: M[], courts: number, slotMin: number, start: Date) {
   const res: { id: string; court: number; start: Date }[] = [];
   const busy = new Map<string, Set<number>>();      // player -> các slot đã bận
   const used = new Map<number, number>();           // slot -> số sân đã dùng
@@ -56,14 +67,23 @@ export function schedule(matches: M[], courts: number, slotMin: number, start: D
   return res;
 }
 
+// Kiểm thử nhanh: node --experimental-strip-types berger.ts
+if (process.argv[1]?.endsWith('berger.ts')) {
+  for (const n of [4, 5, 6, 8]) {
+    const p = berger(Array.from({ length: n }, (_, i) => i + 1));
+    const seen = new Set(p.map(x => [x.a, x.b].sort().join('-')));
+    console.log(`N=${n}: ${p.length} trận (kỳ vọng ${n * (n - 1) / 2}), duy nhất=${seen.size}`);
+  }
+}
 
+// ==== tournament/knockout.ts ====
 // Single elimination + hạt giống + chia bảng + ghép cặp trình độ
-export interface Match { id: string; round: number; a: number | null; b: number | null; next?: string }
+interface Match { id: string; round: number; a: number | null; b: number | null; next?: string }
 
 const nextPow2 = (n: number) => 2 ** Math.ceil(Math.log2(Math.max(n, 2)));
 
 // Thứ tự vị trí chuẩn để hạt giống 1 và 2 chỉ gặp nhau ở chung kết
-export function seedOrder(size: number): number[] {
+function seedOrder(size: number): number[] {
   let order = [1];
   while (order.length < size) {
     const n = order.length * 2;
@@ -73,7 +93,7 @@ export function seedOrder(size: number): number[] {
 }
 
 // entries đã sắp theo hạt giống (index 0 = hạt giống 1). Slot thiếu = bye (null).
-export function knockout(entries: number[]): Match[] {
+function knockout(entries: number[]): Match[] {
   const size = nextPow2(entries.length);
   const pos = seedOrder(size).map(s => entries[s - 1] ?? null);
   const matches: Match[] = [];
@@ -92,7 +112,7 @@ export function knockout(entries: number[]): Match[] {
 }
 
 // Chia bảng kiểu rắn (snake) theo hạt giống
-export function groups(entries: number[], g: number): number[][] {
+function groups(entries: number[], g: number): number[][] {
   const res: number[][] = Array.from({ length: g }, () => []);
   entries.forEach((e, i) => {
     const row = Math.floor(i / g), col = i % g;
@@ -102,11 +122,11 @@ export function groups(entries: number[], g: number): number[][] {
 }
 
 // ---- Ghép cặp vãng lai ----
-export const LEVELS = ['Y', 'TB-', 'TB', 'TB+', 'TBK', 'KHA', 'TOT'];
-export interface P { id: string; level: string; played: number; lastEnd: number }
+const LEVELS = ['Y', 'TB-', 'TB', 'TB+', 'TBK', 'KHA', 'TOT'];
+interface P { id: string; level: string; played: number; lastEnd: number }
 
 // Chia 4 người thành 2 đội cân bằng: thử 3 cách chia, chọn chênh lệch trình độ nhỏ nhất
-export function balanceDoubles(p: [P, P, P, P]) {
+function balanceDoubles(p: [P, P, P, P]) {
   const lv = (x: P) => LEVELS.indexOf(x.level);
   const opts: [[P, P], [P, P]][] = [
     [[p[0], p[1]], [p[2], p[3]]], [[p[0], p[2]], [p[1], p[3]]], [[p[0], p[3]], [p[1], p[2]]]];
@@ -116,16 +136,17 @@ export function balanceDoubles(p: [P, P, P, P]) {
 }
 
 // Chọn 4 người cho trận kế tiếp: ưu tiên ít trận nhất, nghỉ lâu nhất
-export function pickNextFour(pool: P[]): [P, P, P, P] {
+function pickNextFour(pool: P[]): [P, P, P, P] {
   if (pool.length < 4) throw new Error('Cần ít nhất 4 người');
   return [...pool].sort((a, b) => a.played - b.played || a.lastEnd - b.lastEnd).slice(0, 4) as [P, P, P, P];
 }
 
+// ==== tournament/score.ts ====
 // Live score luật BWF: tới 21, hơn 2 điểm, chạm trần 30 (29-29 thì ai ăn điểm thứ 30 thắng); thắng 2/3 ván.
-export interface Game { a: number; b: number }
-export interface ScoreState { games: Game[]; winner: 'A' | 'B' | null }
+interface Game { a: number; b: number }
+interface ScoreState { games: Game[]; winner: 'A' | 'B' | null }
 
-export const gameWinner = ({ a, b }: Game): 'A' | 'B' | null => {
+const gameWinner = ({ a, b }: Game): 'A' | 'B' | null => {
   const hi = Math.max(a, b), lo = Math.min(a, b);
   if (hi >= 30) return a > b ? 'A' : 'B';
   if (hi >= 21 && hi - lo >= 2) return a > b ? 'A' : 'B';
@@ -141,7 +162,7 @@ const calcMatchWinner = (games: Game[]): 'A' | 'B' | null => {
   return wins.A >= 2 ? 'A' : wins.B >= 2 ? 'B' : null;
 };
 
-export function addPoint(s: ScoreState, side: 'A' | 'B'): ScoreState {
+function addPoint(s: ScoreState, side: 'A' | 'B'): ScoreState {
   if (s.winner) throw new Error('Trận đã kết thúc');
   const games = s.games.length ? s.games.map(g => ({ ...g })) : [{ a: 0, b: 0 }];
   let cur = games[games.length - 1];
@@ -150,7 +171,7 @@ export function addPoint(s: ScoreState, side: 'A' | 'B'): ScoreState {
   return { games, winner: calcMatchWinner(games) };
 }
 
-export function subPoint(s: ScoreState, side: 'A' | 'B'): ScoreState {
+function subPoint(s: ScoreState, side: 'A' | 'B'): ScoreState {
   if (!s.games.length) return { games: [], winner: null };
   const games = s.games.map(g => ({ ...g }));
   let cur = games[games.length - 1];
@@ -167,17 +188,11 @@ export function subPoint(s: ScoreState, side: 'A' | 'B'): ScoreState {
   return { games, winner: calcMatchWinner(games) };
 }
 
+// ==== server.ts ====
 // Server hoàn thiện: SQLite bền vững + đăng nhập + phân quyền + đặt sân + POS + giải đấu.
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { DatabaseSync } from 'node:sqlite';
-import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
-import { fileURLToPath } from 'url';
-import path from 'path';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
-const db = new DatabaseSync(process.env.DB_FILE ?? path.join(DIR, 'data.sqlite'));
+const db = new DatabaseSync(process.env.DB_FILE ?? path.join(DIR, '../../data.sqlite'));
 db.exec(`
 PRAGMA journal_mode=WAL;
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY, name TEXT, phone TEXT UNIQUE, pass TEXT, role TEXT DEFAULT 'PLAYER', points INTEGER DEFAULT 0);
@@ -204,9 +219,13 @@ if (!db.prepare('SELECT 1 FROM users').get()) {
 }
 
 db.exec('CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)');
-const DEFAULTS: Record<string, number> = { courts: 6, off_price: 60000, peak_price: 100000, peak_from: 17, weekend_pct: 20, deposit_pct: 30 };
+const DEFAULTS: Record<string, number> = { courts: 6, off_price: 60000, peak_price: 80000, peak_from: 17, weekend_pct: 0, deposit_pct: 30 };
 const CFG: Record<string, number> = { ...DEFAULTS };
 for (const r of db.prepare('SELECT * FROM settings').all() as any[]) CFG[r.key] = Number(r.value);
+if (CFG.peak_price === 100000 && CFG.weekend_pct === 20) {
+  CFG.peak_price = 80000; CFG.weekend_pct = 0;
+  db.prepare(`INSERT INTO settings(key,value) VALUES ('peak_price','80000'),('weekend_pct','0') ON CONFLICT(key) DO UPDATE SET value=excluded.value`).run();
+}
 const COURTS: number[] = [];
 const syncCourts = () => { COURTS.length = 0; for (let i = 1; i <= CFG.courts; i++) COURTS.push(i); };
 syncCourts();
@@ -238,7 +257,7 @@ app.use('/api/register', limit('register', Number(process.env.RATE_LOGIN ?? 40))
 app.use('/api/hold', limit('hold', Number(process.env.RATE_HOLD ?? 200)));
 const http = createServer(app);
 const io = new Server(http);
-app.use(express.static((fs.existsSync(path.join(DIR, 'web')) ? path.join(DIR, 'web') : path.join(DIR, '../../web')), { extensions: ['html'] }));
+app.use(express.static(path.join(DIR, '../../web'), { extensions: ['html'] }));
 const push = () => io.emit('changed');
 
 const slotDate = (date: string, s: number) =>
@@ -297,7 +316,7 @@ app.get('/api/state', (req, res) => {
   const u = userOf(req);
   const staff = !!u && RANK[u.role] >= 1;
   res.json({ courts: COURTS, startH: START_H, slots: SLOTS, now: Date.now(), rules: rulesFor(date), depositPct: CFG.deposit_pct,
-    bookings: rows.map((r: any) => { const b = toB(r); return staff ? b : { ...b, name: 'Đã đặt', items: [] }; }) });
+    bookings: rows.map((r: any) => { const b = toB(r); return staff ? { ...b, customerName: b.name } : { ...b, customerName: b.name, name: 'Đã đặt', items: [] }; }) });
 });
 
 const overlap = db.prepare(`SELECT 1 FROM bookings WHERE status IN ${ACTIVE} AND court=? AND date=? AND code<>? AND from_s<? AND ?<to_s`);
@@ -575,7 +594,6 @@ app.get('/api/tournaments/:id', (req, res) => {
 });
 
 // ================= Đợt 5: cấu hình, webhook thanh toán, thông báo, trực tiếp =================
-import { createHmac } from 'node:crypto';
 
 // ---- Cấu hình sân & bảng giá (Quản lý/Chủ sân) ----
 const LIMITS: Record<string, [number, number]> = { courts: [1, 12], off_price: [0, 5e6], peak_price: [0, 5e6], peak_from: [6, 22], weekend_pct: [0, 200], deposit_pct: [0, 100] };
@@ -635,7 +653,7 @@ app.get('/api/my/notifications', need('PLAYER'), (req, res) => {
 app.post('/api/my/notifications/read', need('PLAYER'), (req, res) => {
   db.prepare('UPDATE notifications SET read=1 WHERE user_id=?').run(((req as any).user as U).id); res.json({ ok: true });
 });
-export function remindNow(now = Date.now()) {
+function remindNow(now = Date.now()) {
   let n = 0;
   for (const b of db.prepare(`SELECT * FROM bookings WHERE status='CONFIRMED' AND user_id IS NOT NULL AND notified=0`).all() as any[]) {
     const left = slotDate(b.date, b.from_s).getTime() - now;
@@ -1017,7 +1035,83 @@ app.post('/api/stringing', (req, res) => {
   push(); res.status(201).json(db.prepare('SELECT * FROM stringing_orders WHERE id=?').get(id));
 });
 
+// ---- API đồng bộ 2 bảng đặt lịch (Nhóm 3 giờ tròn & Sơ đồ sân chính) + Kéo thả đổi lịch trực tiếp ----
+const calcN3Amount = (fromSlot: number, toSlot: number, date: string) =>
+  priceRange(slotDate(date, fromSlot), slotDate(date, toSlot), [
+    { startMin: 0, endMin: CFG.peak_from * 60, perHour: CFG.off_price },
+    { startMin: CFG.peak_from * 60, endMin: 1440, perHour: CFG.peak_price }
+  ]);
+
+const fmtVnd = (n: number) => Math.round(n).toLocaleString('vi-VN') + 'đ';
+const buildN3Formula = (sH: number, eH: number, total: number) => {
+  let offH = 0, peakH = 0; const parts: string[] = [];
+  for (let h = sH; h < eH; h++) {
+    if (h < CFG.peak_from) { offH++; parts.push(fmtVnd(CFG.off_price)); }
+    else { peakH++; parts.push(fmtVnd(CFG.peak_price)); }
+  }
+  return (offH > 0 && peakH > 0)
+    ? `${parts.join(' + ')} = ${fmtVnd(total)} (${offH}h trước ${CFG.peak_from}h + ${peakH}h từ ${CFG.peak_from}h)`
+    : offH > 0
+      ? `${offH} giờ × ${fmtVnd(CFG.off_price)} = ${fmtVnd(total)}`
+      : `${peakH} giờ × ${fmtVnd(CFG.peak_price)} = ${fmtVnd(total)}`;
+};
+
+app.post('/api/nhom3/book', (req, res) => {
+  expire();
+  const u = userOf(req);
+  const { court, date, startH, endH, name } = req.body ?? {};
+  const c = Number(court), sH = Number(startH), eH = Number(endH);
+  const cName = String(name || u?.name || 'Sinh viên HVU').trim();
+  if (!Number.isInteger(sH) || !Number.isInteger(eH)) return res.status(400).json({ message: 'Chỉ cho phép đặt theo giờ tròn (ví dụ: 16h – 18h)!' });
+  if (eH <= sH) return res.status(400).json({ message: `Lỗi thứ tự giờ (T5): Giờ kết thúc (${eH}h) phải lớn hơn giờ bắt đầu (${sH}h)!` });
+  if (sH < 6 || eH > 22) return res.status(400).json({ message: `Ngoài giờ mở cửa (T5): Sân chỉ mở từ 6h đến 22h (không thể đặt ${sH}h – ${eH}h)!` });
+  if (!COURTS.includes(c) || !/^\d{4}-\d{2}-\d{2}$/.test(String(date ?? ''))) return res.status(400).json({ message: 'Sân hoặc ngày không hợp lệ' });
+  const from = (sH - START_H) * 2, to = (eH - START_H) * 2;
+  if (slotDate(date, from).getTime() < Date.now() - 30 * 60000) return res.status(400).json({ message: 'Lỗi thời gian quá khứ (T4): Không thể đặt ngày/giờ đã qua!' });
+  const conf: any = db.prepare(`SELECT * FROM bookings WHERE status IN ${ACTIVE} AND court=? AND date=? AND from_s<? AND ?<to_s`).get(c, date, to, from);
+  if (conf) {
+    const cStart = START_H + conf.from_s / 2, cEnd = START_H + conf.to_s / 2;
+    return res.status(409).json({ message: `Báo trùng lịch (T3): Sân ${c} ngày ${date} đã có lịch ${cStart}h – ${cEnd}h (chồng lấn khoảng ${Math.max(sH, cStart)}h – ${Math.min(eH, cEnd)}h)!` });
+  }
+  const amount = calcN3Amount(from, to, date);
+  const formula = buildN3Formula(sH, eH, amount);
+  const code = 'BK' + (Date.now() % 1e8).toString(36).toUpperCase() + randomBytes(1).toString('hex').toUpperCase();
+  db.prepare('INSERT INTO bookings(code,court,date,from_s,to_s,name,user_id,status,amount,deposit,hold_until,created) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?)')
+    .run(code, c, date, from, to, cName, u?.id ?? null, 'CONFIRMED', amount, Math.round(amount * CFG.deposit_pct / 100), Date.now());
+  push();
+  const row = toB(db.prepare('SELECT * FROM bookings WHERE code=?').get(code));
+  res.status(201).json({ ...row, startH: sH, endH: eH, total: amount, formula });
+});
+
+app.post('/api/nhom3/move/:code', (req, res) => {
+  expire();
+  const b: any = db.prepare('SELECT * FROM bookings WHERE code=?').get(req.params.code);
+  if (!b) return res.sendStatus(404);
+  const court = Number(req.body?.court ?? b.court);
+  const from = Number(req.body?.from);
+  const to = from + (b.to_s - b.from_s);
+  if (!COURTS.includes(court) || from < 0 || to > SLOTS) return res.status(400).json({ message: 'Vị trí sân/giờ chuyển đến vượt ngoài khung giờ mở cửa!' });
+  if (overlap.get(court, b.date, b.code, to, from)) return res.status(409).json({ message: 'Không thể chuyển: khung giờ đích đã có người đặt!' });
+  const amt = calcN3Amount(from, to, b.date);
+  const sH = Math.floor(START_H + from / 2), eH = Math.ceil(START_H + to / 2);
+  const formula = buildN3Formula(sH, eH, amt);
+  db.prepare('UPDATE bookings SET court=?, from_s=?, to_s=?, amount=? WHERE code=?').run(court, from, to, amt, b.code);
+  push();
+  res.json({ diff: amt - b.amount, amount: amt, total: amt, court, from, to, startH: sH, endH: eH, formula });
+});
+
+app.post('/api/nhom3/cancel/:code', (req, res) => {
+  db.prepare(`UPDATE bookings SET status='CANCELLED' WHERE code=?`).run(req.params.code);
+  push(); res.json({ ok: true });
+});
+
+app.post('/api/nhom3/reset', (req, res) => {
+  const date = req.body?.date;
+  if (date) db.prepare(`DELETE FROM bookings WHERE date=?`).run(String(date));
+  else db.prepare(`DELETE FROM bookings`).run();
+  push(); res.json({ ok: true });
+});
+
 const port = Number(process.env.PORT ?? 4000);
 http.listen(port, () => console.log(`Web chạy tại http://localhost:${port}`));
-
 
