@@ -83,7 +83,7 @@ npm install
 node --experimental-strip-types src/server.ts
 ```
 
-Truy cập ứng dụng tại: **http://localhost:4000**
+Truy cập ứng dụng tại: **[http://localhost:4000](https://caulong-pro.onrender.com)**
 
 ---
 
