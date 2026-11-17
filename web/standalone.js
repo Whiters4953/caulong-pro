@@ -47,7 +47,7 @@
 
   function defaultDB() {
     return {
-      cfg: { courts: 6, off_price: 60000, peak_price: 100000, peak_from: 17, weekend_pct: 20, deposit_pct: 30 },
+      cfg: { courts: 6, off_price: 60000, peak_price: 80000, peak_from: 17, weekend_pct: 0, deposit_pct: 30 },
       users: [
         { id: 1, name: 'Chủ sân', phone: '0900000001', pass: 'admin123', role: 'OWNER', points: 120 },
         { id: 2, name: 'Quản lý', phone: '0900000002', pass: 'manager123', role: 'MANAGER', points: 80 },
@@ -223,7 +223,7 @@
       const courts = Array.from({ length: db.cfg.courts }, (_, i) => i + 1);
       const staff = me && RANK[me.role] >= 1;
       const bks = db.bookings.filter(b => b.date === date && ['PENDING', 'CONFIRMED', 'PLAYING'].includes(b.status))
-        .map(b => staff ? b : { ...b, name: 'Đã đặt', items: [] });
+        .map(b => staff ? { ...b, customerName: b.name } : { ...b, customerName: b.name, name: 'Đã đặt', items: [] });
       return res(200, { courts, startH: 6, slots: 34, now: Date.now(), rules: rulesFor(db, date), depositPct: db.cfg.deposit_pct, bookings: bks });
     }
     if (path === '/api/hold') {
@@ -441,6 +441,38 @@
       const PRICES = { 'Yonex BG65': 140000, 'Yonex BG65 Titanium': 160000, 'Yonex BG80 Power': 195000, 'Yonex Exbolt 63': 210000, 'Yonex Exbolt 65': 210000, 'Yonex Aerobite': 230000, 'Lining No.1': 165000 };
       const ord = { id: Date.now(), customer_name: body.customerName, racket_model: body.racketModel, string_name: body.stringName, tension_kg: body.tensionKg, pattern: body.pattern, price: PRICES[body.stringName] || 160000, created: Date.now() };
       db.stringing_orders.unshift(ord); saveDB(db); return res(201, ord);
+    }
+    if (path === '/api/nhom3/book') {
+      const c = +body.court, sH = +body.startH, eH = +body.endH, date = body.date;
+      if (eH <= sH) return res(400, { message: `Lỗi thứ tự giờ (T5): Giờ kết thúc (${eH}h) phải lớn hơn giờ bắt đầu (${sH}h)!` });
+      if (sH < 6 || eH > 22) return res(400, { message: `Ngoài giờ mở cửa (T5): Sân chỉ mở từ 6h đến 22h!` });
+      if (!date || date < today) return res(400, { message: `Lỗi thời gian quá khứ (T4): Không thể đặt ngày/giờ đã qua!` });
+      const from = (sH - 6) * 2, to = (eH - 6) * 2;
+      const conf = db.bookings.find(b => b.court === c && b.date === date && ['PENDING', 'CONFIRMED', 'PLAYING'].includes(b.status) && b.from < to && from < b.to);
+      if (conf) return res(409, { message: `Báo trùng lịch (T3): Sân ${c} ngày ${date} đã có lịch ${6 + conf.from/2}h – ${6 + conf.to/2}h!` });
+      const amount = calcPrice(db, date, from, to);
+      const bk = { code: 'BK' + (Date.now() % 1e7).toString(36).toUpperCase(), court: c, date, from, to, name: body.name || me?.name || 'Sinh viên HVU', user_id: me?.id || null, status: 'CONFIRMED', amount, deposit: Math.round(amount * db.cfg.deposit_pct / 100), holdUntil: null, created: Date.now(), items: [] };
+      db.bookings.unshift(bk); saveDB(db); emitLocal('changed'); return res(201, bk);
+    }
+    if (path.startsWith('/api/nhom3/move/')) {
+      const code = path.split('/').pop(), b = db.bookings.find(x => x.code === code);
+      if (!b) return res(404, {});
+      const len = b.to - b.from, to = body.from + len;
+      if (db.bookings.some(x => x.code !== code && x.court === body.court && x.date === b.date && ['PENDING', 'CONFIRMED', 'PLAYING'].includes(x.status) && x.from < to && body.from < x.to))
+        return res(409, { message: 'Không thể chuyển: khung giờ đích đã có người đặt!' });
+      const amt = calcPrice(db, b.date, body.from, to), diff = amt - b.amount;
+      b.court = body.court; b.from = body.from; b.to = to; b.amount = amt; saveDB(db); emitLocal('changed');
+      return res(200, { diff, amount: amt });
+    }
+    if (path.startsWith('/api/nhom3/cancel/')) {
+      const code = path.split('/').pop(), b = db.bookings.find(x => x.code === code);
+      if (b) { b.status = 'CANCELLED'; saveDB(db); emitLocal('changed'); }
+      return res(200, { ok: true });
+    }
+    if (path === '/api/nhom3/reset') {
+      if (body.date) db.bookings = db.bookings.filter(b => b.date !== body.date);
+      else db.bookings = [];
+      saveDB(db); emitLocal('changed'); return res(200, { ok: true });
     }
     return res(200, {});
   }

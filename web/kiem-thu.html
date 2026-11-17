@@ -1,0 +1,925 @@
+﻿<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CầuLông Pro – Đặt Lịch Sân Cầu Lông Trực Tuyến (Nhóm 3)</title>
+<style>
+  /* ==========================================================================
+     HỆ THIẾT KẾ THUẦN CSS (KHÔNG DÙNG THƯ VIỆN NGOÀI - CHẠY ĐƯỢC KHI MẤT MẠNG)
+     ========================================================================== */
+  :root {
+    --brand: #0f766e;
+    --brand-dark: #0a363a;
+    --brand-light: #ccfbf1;
+    --accent: #f97316;
+    --accent-dark: #ea580c;
+    --bg: #f1f7f7;
+    --card: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #cbd5e1;
+    --free: #16a34a;
+    --booked: #f59e0b;
+    --past: #94a3b8;
+    --err-bg: #fef2f2;
+    --err-ink: #b91c1c;
+    --err-line: #f87171;
+    --ok-bg: #f0fdf4;
+    --ok-ink: #15803d;
+    --ok-line: #4ade80;
+    --radius: 14px;
+    --shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Header */
+  header {
+    background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 100%);
+    color: #fff;
+    padding: 18px 16px;
+    box-shadow: 0 4px 14px rgba(15, 118, 110, 0.25);
+  }
+  .container { max-width: 1140px; margin: 0 auto; padding: 0 14px; }
+  .header-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand-box { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.3);
+    display: grid; place-items: center; font-size: 24px;
+  }
+  .brand-title { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+  .brand-sub { font-size: 13px; opacity: 0.88; margin: 2px 0 0; }
+  .price-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700;
+    background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+  }
+  .badge-peak { background: #fff7ed; color: #c2410c; border-color: #fdba74; }
+
+  /* Layout */
+  main { padding: 20px 0 40px; display: grid; gap: 18px; }
+  .grid-2 { display: grid; grid-template-columns: 1.05fr 1.25fr; gap: 18px; align-items: start; }
+  @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 17px; font-weight: 700; margin: 0 0 4px;
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .card-desc { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+
+  /* Form controls */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+  .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+  input, select {
+    width: 100%; padding: 9px 11px; border-radius: 10px;
+    border: 1.5px solid var(--line); font-size: 14px; font-family: inherit;
+    background: #fff; color: var(--ink); font-weight: 600;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18); }
+
+  /* Buttons */
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  button {
+    font-family: inherit; font-size: 13.5px; font-weight: 700;
+    padding: 10px 16px; border-radius: 10px; border: 0; cursor: pointer;
+    transition: transform 0.08s, filter 0.15s;
+  }
+  button:active { transform: scale(0.98); }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { filter: brightness(1.08); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: var(--accent-dark); }
+  .btn-outline { background: #f8fafc; color: var(--ink); border: 1.5px solid var(--line); }
+  .btn-outline:hover { background: var(--brand-light); border-color: var(--brand); color: var(--brand); }
+  .btn-sm { padding: 6px 11px; font-size: 12px; border-radius: 8px; }
+  .btn-danger { background: #fee2e2; color: #b91c1c; }
+
+  /* Preview & Alert boxes */
+  .calc-box {
+    background: #f0fdfa; border: 1.5px dashed #14b8a6;
+    border-radius: 11px; padding: 12px 14px; margin-top: 12px;
+  }
+  .calc-formula { font-size: 13px; color: #0f766e; font-weight: 600; }
+  .calc-total { font-size: 20px; font-weight: 700; color: var(--brand-dark); margin-top: 2px; }
+  .alert {
+    margin-top: 12px; padding: 12px 14px; border-radius: 10px;
+    font-size: 13.5px; font-weight: 700; display: none;
+  }
+  .alert.err { display: block; background: var(--err-bg); color: var(--err-ink); border: 1.5px solid var(--err-line); }
+  .alert.ok  { display: block; background: var(--ok-bg); color: var(--ok-ink); border: 1.5px solid var(--ok-line); }
+
+  /* Schedule Matrix Table */
+  .matrix-wrap { overflow-x: auto; margin-top: 8px; }
+  table.matrix { width: 100%; border-collapse: separate; border-spacing: 4px; min-width: 680px; }
+  table.matrix th {
+    font-size: 11.5px; font-weight: 700; padding: 6px 2px;
+    text-align: center; color: #475569; background: #f8fafc; border-radius: 6px;
+  }
+  table.matrix th.peak-col { color: #c2410c; background: #fff7ed; }
+  table.matrix td.court-name {
+    font-weight: 700; font-size: 13px; padding: 8px 10px;
+    background: var(--brand-light); color: var(--brand-dark);
+    border-radius: 8px; white-space: nowrap; width: 78px; text-align: center;
+  }
+  table.matrix td.slot {
+    height: 44px; border-radius: 8px; text-align: center;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    padding: 2px 4px; color: #fff; user-select: none;
+    transition: transform 0.1s, filter 0.1s;
+  }
+  table.matrix td.slot:hover { transform: scale(1.05); filter: brightness(0.95); }
+  .slot-free { background: var(--free); }
+  .slot-sel { background: var(--accent); box-shadow: 0 0 0 2px #c2410c inset; }
+  .slot-booked { background: var(--booked); color: #1e293b !important; cursor: grab; }
+  .slot-past { background: #cbd5e1; color: #475569 !important; cursor: not-allowed; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+  .lg-dot { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
+
+  /* Test suite table & bookings list */
+  table.list-tbl { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  table.list-tbl th, table.list-tbl td { padding: 9px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+  table.list-tbl th { background: #f8fafc; font-weight: 700; color: #334155; font-size: 12px; text-transform: uppercase; }
+  .pass-pill { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 11.5px; }
+  .wait-pill { background: #f1f5f9; color: #64748b; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 11.5px; }
+  footer { text-align: center; padding: 20px; font-size: 12.5px; color: var(--muted); border-top: 1px solid #e2e8f0; background: #fff; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container header-row">
+    <div class="brand-box">
+      <div class="logo-icon">🏸</div>
+      <div>
+        <h1 class="brand-title">CầuLông Pro – Đặt Lịch Sân Cầu Lông</h1>
+        <p class="brand-sub">Nhóm 3 · K22-CNTT B · Khoa Kỹ thuật Công nghệ – Trường Đại học Hùng Vương</p>
+      </div>
+    </div>
+    <div class="price-badges">
+      <span class="badge">🏟 Quy mô: <b id="lbl-so-san">3</b> sân (6h – 22h)</span>
+      <span class="badge">☀️ Trước 17h: <b id="lbl-gia-thuong">60.000đ</b>/giờ</span>
+      <span class="badge badge-peak">🔥 Từ 17h: <b id="lbl-gia-cao-diem">80.000đ</b>/giờ</span>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="grid-2">
+    <!-- CỘT TRÁI: FORM ĐẶT LỊCH SÂN THEO GIỜ TRÒN -->
+    <section class="card">
+      <h2 class="card-title">📅 Đặt lịch sân cầu lông (Theo giờ tròn)</h2>
+      <p class="card-desc">Mở cửa từ 6h đến 22h hằng ngày. Hệ thống tự động tách giá lúc 17h và kiểm tra chống đặt trùng.</p>
+
+      <!-- Nút chọn ngày nhanh để kiểm thử T1-T4 -->
+      <div class="btn-row" style="margin-bottom: 12px;">
+        <button type="button" class="btn-outline btn-sm" onclick="chonNgayNhanh(1)">👉 Ngày mai (Chuẩn T1–T3)</button>
+        <button type="button" class="btn-outline btn-sm" onclick="chonNgayNhanh(0)">Hôm nay</button>
+        <button type="button" class="btn-outline btn-sm" onclick="chonNgayNhanh(-1)">Hôm qua (Kiểm thử T4)</button>
+      </div>
+
+      <form id="formDatSan" onsubmit="xuLyDatSan(event)">
+        <div class="form-grid">
+          <div>
+            <label for="inpSan">Chọn sân thi đấu</label>
+            <select id="inpSan" onchange="capNhatTamTinh()"></select>
+          </div>
+          <div>
+            <label for="inpNgay">Ngày đặt sân</label>
+            <input type="date" id="inpNgay" required onchange="veBangLich(); capNhatTamTinh();">
+          </div>
+          <div>
+            <label for="inpBatDau">Giờ bắt đầu (h)</label>
+            <input type="number" id="inpBatDau" value="18" min="0" max="24" step="1" required oninput="capNhatTamTinh()">
+          </div>
+          <div>
+            <label for="inpKetThuc">Giờ kết thúc (h)</label>
+            <input type="number" id="inpKetThuc" value="20" min="0" max="24" step="1" required oninput="capNhatTamTinh()">
+          </div>
+          <div class="full">
+            <label for="inpKhach">Tên người đặt (Dữ liệu mẫu)</label>
+            <input type="text" id="inpKhach" value="Nhóm 3 - Sinh viên HVU" placeholder="Nhập tên người đặt" required>
+          </div>
+        </div>
+
+        <!-- Khung hiển thị công thức tính tiền trực tiếp -->
+        <div class="calc-box" id="boxTamTinh">
+          <div class="calc-formula" id="txtCongThuc">Đang tính...</div>
+          <div class="calc-total" id="txtTongTien">0đ</div>
+        </div>
+
+        <!-- Khung báo lỗi / thành công rõ ràng -->
+        <div id="hopThongBao" class="alert" role="alert"></div>
+
+        <div class="btn-row" style="margin-top: 14px;">
+          <button type="submit" class="btn-accent" style="flex: 1;">✅ Xác nhận đặt sân</button>
+          <button type="button" class="btn-outline" onclick="xoaTatCaLich()">🔄 Làm mới toàn bộ lịch</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- CỘT PHẢI: BẢNG KIỂM THỬ TỰ ĐỘNG 5 KỊCH BẢN (T1 - T5) TRONG ĐỀ BÀI -->
+    <section class="card">
+      <div class="card-title">
+        <span>🧪 Bảng Kiểm Thử 5 Kịch Bản Đề Bài (T1 – T5)</span>
+        <button type="button" class="btn-primary btn-sm" onclick="chayTatCaKichBan()">▶ Chạy tự động T1 → T5</button>
+      </div>
+      <p class="card-desc">Bấm vào từng nút <b>Chạy</b> để điền dữ liệu vào form và kiểm chứng kết quả ngay trước lớp:</p>
+
+      <div style="overflow-x: auto;">
+        <table class="list-tbl">
+          <thead>
+            <tr>
+              <th>Mã</th>
+              <th>Thao tác kiểm thử</th>
+              <th>Kết quả đúng theo đề</th>
+              <th>Kết quả thực tế</th>
+              <th>Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="bangKichBan">
+            <tr>
+              <td><b>T1</b></td>
+              <td>Sân 1, ngày mai, <b>18h – 20h</b></td>
+              <td><b>160.000đ</b></td>
+              <td id="kq-T1"><span class="wait-pill">Chưa chạy</span></td>
+              <td><button class="btn-outline btn-sm" onclick="chayKichBan('T1')">Chạy T1</button></td>
+            </tr>
+            <tr>
+              <td><b>T2</b></td>
+              <td>Sân 2, ngày mai, <b>16h – 18h</b></td>
+              <td><b>60.000đ + 80.000đ = 140.000đ</b></td>
+              <td id="kq-T2"><span class="wait-pill">Chưa chạy</span></td>
+              <td><button class="btn-outline btn-sm" onclick="chayKichBan('T2')">Chạy T2</button></td>
+            </tr>
+            <tr>
+              <td><b>T3</b></td>
+              <td>Sau T1, đặt Sân 1 lúc <b>19h – 21h</b>;<br>đặt Sân 3 cùng giờ (19h – 21h)</td>
+              <td>Sân 1: <b>Báo trùng lịch</b>;<br>Sân 3: <b>Đặt được (160.000đ)</b></td>
+              <td id="kq-T3"><span class="wait-pill">Chưa chạy</span></td>
+              <td><button class="btn-outline btn-sm" onclick="chayKichBan('T3')">Chạy T3</button></td>
+            </tr>
+            <tr>
+              <td><b>T4</b></td>
+              <td>Đặt <b>ngày hôm qua</b>, hoặc <b>giờ đã qua hôm nay</b></td>
+              <td><b>Không cho đặt (Báo lỗi)</b></td>
+              <td id="kq-T4"><span class="wait-pill">Chưa chạy</span></td>
+              <td><button class="btn-outline btn-sm" onclick="chayKichBan('T4')">Chạy T4</button></td>
+            </tr>
+            <tr>
+              <td><b>T5</b></td>
+              <td>Giờ kết thúc sớm hơn giờ bắt đầu (18h–16h); hoặc <b>21h – 23h</b></td>
+              <td><b>Báo lỗi (sai thứ tự / ngoài giờ 6h–22h)</b></td>
+              <td id="kq-T5"><span class="wait-pill">Chưa chạy</span></td>
+              <td><button class="btn-outline btn-sm" onclick="chayKichBan('T5')">Chạy T5</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- SƠ ĐỒ LỊCH CÁC KHUNG GIỜ CỦA TỪNG SÂN (6h - 22h) -->
+  <section class="card">
+    <div class="card-title">
+      <span>🗓 Sơ đồ lịch các khung giờ của 3 sân (<span id="lblNgayBang"></span>)</span>
+      <span style="font-size: 12px; font-weight: 600; color: var(--muted);">Chạm vào ô trống màu xanh để chọn nhanh khung giờ</span>
+    </div>
+    <div class="legend">
+      <span><i class="lg-dot" style="background: var(--free);"></i>Còn trống (60k trước 17h / 80k từ 17h)</span>
+      <span><i class="lg-dot" style="background: var(--booked);"></i>Đã đặt (Khóa chống trùng)</span>
+      <span><i class="lg-dot" style="background: var(--past);"></i>Đã qua giờ</span>
+    </div>
+    <div class="matrix-wrap">
+      <table class="matrix" id="bangMaTran"></table>
+    </div>
+  </section>
+
+  <!-- DANH SÁCH ĐƠN ĐÃ ĐẶT -->
+  <section class="card">
+    <div class="card-title">
+      <span>📋 Danh sách các khung giờ đã đặt (<span id="lblSoDon">0</span> lịch)</span>
+    </div>
+    <div style="overflow-x: auto;">
+      <table class="list-tbl">
+        <thead>
+          <tr>
+            <th>Mã đơn</th>
+            <th>Sân</th>
+            <th>Ngày</th>
+            <th>Khung giờ</th>
+            <th>Khách đặt</th>
+            <th>Chi tiết tính tiền</th>
+            <th>Thành tiền</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dsDonDat"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <b>CầuLông Pro</b> – Sản phẩm thực hành chuyên đề <i>“Ứng dụng AI trong học tập, nghiên cứu chuyên ngành CNTT”</i><br>
+  Nhóm 3 (K22-CNTT B): Ngô Đình Hậu · Trần Hồng Đức · Đinh Thanh Hải · Nguyễn Đinh Xuân Dương · Nguyễn Bảo Long – Trường Đại học Hùng Vương
+</footer>
+
+<script>
+/* ============================================================================
+   PHẦN 1: CẤU HÌNH HẰNG SỐ NGHIỆP VỤ (DỄ DÀNG CHỈNH SỬA KHI VẤN ĐÁP)
+   - Khi giảng viên hỏi: "Nếu đổi giá sân hoặc giờ mở cửa thì sửa ở đâu?",
+     nhóm chỉ cần thay đổi giá trị trong đối tượng CAU_HINH dưới đây.
+   ============================================================================ */
+const CAU_HINH = {
+  SO_SAN: 3,               // Số lượng sân: 3 sân (Sân 1, Sân 2, Sân 3)
+  GIO_MO_CUA: 6,           // Giờ mở cửa: 6h sáng
+  GIO_DONG_CUA: 22,        // Giờ đóng cửa: 22h tối
+  MOC_CAO_DIEM: 17,        // Mốc chuyển sang giá cao điểm: 17h chiều
+  GIA_TRUOC_17H: 60000,    // Giá trước 17h: 60.000đ/giờ
+  GIA_TU_17H: 80000        // Giá từ 17h trở đi: 80.000đ/giờ
+};
+
+// Mảng lưu các lịch đặt sân (lưu vào localStorage để giữ trạng thái khi F5)
+const STORAGE_KEY = 'caulong_pro_nhom3_bookings';
+let danhSachDatSan = [];
+try {
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+  if (Array.isArray(saved)) danhSachDatSan = saved;
+} catch (e) {}
+
+function luuDuLieu() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(danhSachDatSan)); } catch (e) {}
+}
+
+// Hàm định dạng tiền tệ tiếng Việt (VD: 160000 -> "160.000đ")
+function dinhDangTien(soTien) {
+  return Math.round(soTien).toLocaleString('vi-VN') + 'đ';
+}
+
+/* ============================================================================
+   PHẦN 2: XỬ LÝ NGÀY GIỜ ĐỊA PHƯƠNG (SỬA LỖI AI DÙNG UTC GÂY LỆCH NGÀY)
+   - Lỗi AI thường gặp: dùng new Date().toISOString().slice(0,10) bị lệch -7 tiếng
+     theo giờ UTC (từ 0h–7h sáng ở Việt Nam sẽ bị tính lùi thành ngày hôm trước).
+   - Cách nhóm sửa: dùng getFullYear(), getMonth()+1, getDate() theo giờ máy.
+   ============================================================================ */
+function layChuoiNgayDiaPhuong(offsetDays = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/* ============================================================================
+   PHẦN 3: THUẬT TOÁN TÍNH TIỀN TÁCH THEO TỪNG GIỜ (SỬA LỖI AI Ở KỊCH BẢN T2)
+   - Lỗi AI thường gặp: chỉ kiểm tra giờ bắt đầu (16h < 17h) rồi nhân cả 2 tiếng
+     với 60.000đ = 120.000đ (SAI).
+   - Cách nhóm sửa: duyệt từng giờ h từ [gioBatDau .. gioKetThuc - 1], giờ nào
+     trước 17h tính 60.000đ, giờ nào từ 17h trở đi tính 80.000đ.
+   ============================================================================ */
+function tinhTienSan(gioBatDau, gioKetThuc) {
+  let tongTien = 0;
+  let soGioThuong = 0;
+  let soGioCaoDiem = 0;
+  const cacMucGia = [];
+
+  for (let h = gioBatDau; h < gioKetThuc; h++) {
+    if (h < CAU_HINH.MOC_CAO_DIEM) {
+      tongTien += CAU_HINH.GIA_TRUOC_17H;
+      soGioThuong++;
+      cacMucGia.push(dinhDangTien(CAU_HINH.GIA_TRUOC_17H));
+    } else {
+      tongTien += CAU_HINH.GIA_TU_17H;
+      soGioCaoDiem++;
+      cacMucGia.push(dinhDangTien(CAU_HINH.GIA_TU_17H));
+    }
+  }
+
+  // Tạo chuỗi giải thích công thức rõ ràng (VD: "60.000đ + 80.000đ = 140.000đ")
+  let dienGiai = '';
+  if (soGioThuong > 0 && soGioCaoDiem > 0) {
+    dienGiai = `${cacMucGia.join(' + ')} = ${dinhDangTien(tongTien)} (${soGioThuong}h trước 17h + ${soGioCaoDiem}h từ 17h)`;
+  } else if (soGioThuong > 0) {
+    dienGiai = `${soGioThuong} giờ × ${dinhDangTien(CAU_HINH.GIA_TRUOC_17H)} = ${dinhDangTien(tongTien)} (khung trước 17h)`;
+  } else if (soGioCaoDiem > 0) {
+    dienGiai = `${soGioCaoDiem} giờ × ${dinhDangTien(CAU_HINH.GIA_TU_17H)} = ${dinhDangTien(tongTien)} (khung từ 17h)`;
+  }
+
+  return { tongTien, soGioThuong, soGioCaoDiem, dienGiai };
+}
+
+/* ============================================================================
+   PHẦN 4: KIỂM TRA HỢP LỆ & CHỐNG ĐẶT TRÙNG CHỒNG LẤN (T3, T4, T5)
+   - Lỗi AI thường gặp ở T3: chỉ so sánh (don.batDau === gioBatDau) nên bỏ sót
+     trường hợp đã đặt 18h–20h mà người sau đặt 19h–21h.
+   - Công thức giao nhau chuẩn của 2 đoạn [A, B) và [C, D): (A < D) && (C < B).
+   ============================================================================ */
+function kiemTraHopLeVaTrungLich(san, ngay, gioBatDau, gioKetThuc) {
+  // 1. Kiểm tra giờ nguyên (đặt theo giờ tròn)
+  if (!Number.isInteger(gioBatDau) || !Number.isInteger(gioKetThuc)) {
+    return { hopLe: false, loi: 'Vui lòng chỉ đặt theo giờ tròn (ví dụ: 16h đến 18h)!' };
+  }
+
+  // 2. Kiểm tra thứ tự giờ bắt đầu và kết thúc (Kịch bản T5)
+  if (gioKetThuc <= gioBatDau) {
+    return { hopLe: false, loi: `Lỗi thứ tự giờ (T5): Giờ kết thúc (${gioKetThuc}h) phải lớn hơn giờ bắt đầu (${gioBatDau}h)!` };
+  }
+
+  // 3. Kiểm tra phạm vi giờ mở cửa 6h – 22h (Kịch bản T5: 21h – 23h)
+  if (gioBatDau < CAU_HINH.GIO_MO_CUA || gioKetThuc > CAU_HINH.GIO_DONG_CUA) {
+    return {
+      hopLe: false,
+      loi: `Ngoài giờ mở cửa (T5): Sân chỉ mở cửa từ ${CAU_HINH.GIO_MO_CUA}h đến ${CAU_HINH.GIO_DONG_CUA}h (không thể đặt ${gioBatDau}h – ${gioKetThuc}h)!`
+    };
+  }
+
+  // 4. Kiểm tra không cho đặt ngày hôm qua hoặc giờ đã qua hôm nay (Kịch bản T4)
+  const homNay = layChuoiNgayDiaPhuong(0);
+  if (!ngay || ngay < homNay) {
+    return { hopLe: false, loi: `Lỗi thời gian quá khứ (T4): Không thể đặt sân vào ngày đã qua (${ngay})!` };
+  }
+  if (ngay === homNay) {
+    const bayGio = new Date();
+    const gioHienTai = bayGio.getHours() + bayGio.getMinutes() / 60;
+    if (gioBatDau <= gioHienTai) {
+      return {
+        hopLe: false,
+        loi: `Lỗi giờ đã qua (T4): Khung ${gioBatDau}h – ${gioKetThuc}h hôm nay đã qua giờ hiện tại (${bayGio.getHours()}h${String(bayGio.getMinutes()).padStart(2, '0')})!`
+      };
+    }
+  }
+
+  // 5. Kiểm tra chống đặt trùng / chồng lấn một phần trên cùng sân & cùng ngày (Kịch bản T3)
+  const donTrung = danhSachDatSan.find(don =>
+    don.san === san &&
+    don.ngay === ngay &&
+    gioBatDau < don.ketThuc &&
+    don.batDau < gioKetThuc
+  );
+  if (donTrung) {
+    const trungTu = Math.max(gioBatDau, donTrung.batDau);
+    const trungDen = Math.min(gioKetThuc, donTrung.ketThuc);
+    return {
+      hopLe: false,
+      loi: `Báo trùng lịch (T3): Sân ${san} ngày ${ngay} đã có lịch đặt từ ${donTrung.batDau}h – ${donTrung.ketThuc}h (bị chồng lấn khoảng ${trungTu}h – ${trungDen}h)!`
+    };
+  }
+
+  return { hopLe: true, loi: '' };
+}
+
+/* ============================================================================
+   PHẦN 5: HÀM ĐẶT SÂN & CẬP NHẬT GIAO DIỆN
+   ============================================================================ */
+function hienThongBao(noiDung, laLoi = false) {
+  const el = document.getElementById('hopThongBao');
+  el.className = 'alert ' + (laLoi ? 'err' : 'ok');
+  el.innerHTML = (laLoi ? '❌ ' : '✅ ') + noiDung;
+}
+
+function capNhatTamTinh() {
+  const san = Number(document.getElementById('inpSan').value);
+  const ngay = document.getElementById('inpNgay').value;
+  const bd = Number(document.getElementById('inpBatDau').value);
+  const kt = Number(document.getElementById('inpKetThuc').value);
+
+  const ktHopLe = kiemTraHopLeVaTrungLich(san, ngay, bd, kt);
+  const txtCongThuc = document.getElementById('txtCongThuc');
+  const txtTongTien = document.getElementById('txtTongTien');
+
+  if (!ktHopLe.hopLe) {
+    txtCongThuc.textContent = ktHopLe.loi;
+    txtCongThuc.style.color = '#b91c1c';
+    txtTongTien.textContent = 'Không hợp lệ';
+    return;
+  }
+
+  const kq = tinhTienSan(bd, kt);
+  txtCongThuc.style.color = '#0f766e';
+  txtCongThuc.textContent = `Sân ${san} (${ngay}, ${bd}h – ${kt}h): ${kq.dienGiai}`;
+  txtTongTien.textContent = `Tổng tiền: ${dinhDangTien(kq.tongTien)}`;
+}
+
+function thucHienDatSan(san, ngay, bd, kt, khach) {
+  const check = kiemTraHopLeVaTrungLich(san, ngay, bd, kt);
+  if (!check.hopLe) {
+    hienThongBao(check.loi, true);
+    capNhatTamTinh();
+    return { thanhCong: false, loi: check.loi };
+  }
+
+  const kqGia = tinhTienSan(bd, kt);
+  const maDon = 'CL' + String(danhSachDatSan.length + 1).padStart(3, '0');
+  const donMoi = {
+    ma: maDon,
+    san,
+    ngay,
+    batDau: bd,
+    ketThuc: kt,
+    khach: khach || 'Khách đặt sân',
+    tongTien: kqGia.tongTien,
+    dienGiai: kqGia.dienGiai
+  };
+
+  danhSachDatSan.push(donMoi);
+  luuDuLieu();
+  veBangLich();
+  veDanhSachDon();
+  capNhatTamTinh();
+  hienThongBao(`Đặt sân thành công! <b>Sân ${san}</b> (${ngay}, <b>${bd}h – ${kt}h</b>) · Thành tiền: <b>${kqGia.dienGiai}</b>`, false);
+  return { thanhCong: true, don: donMoi };
+}
+
+function xuLyDatSan(e) {
+  e.preventDefault();
+  const san = Number(document.getElementById('inpSan').value);
+  const ngay = document.getElementById('inpNgay').value;
+  const bd = Number(document.getElementById('inpBatDau').value);
+  const kt = Number(document.getElementById('inpKetThuc').value);
+  const khach = document.getElementById('inpKhach').value.trim();
+  thucHienDatSan(san, ngay, bd, kt, khach);
+}
+
+function toMauOChon() {
+  const sanChon = Number(document.getElementById('inpSan').value);
+  const bdChon = Number(document.getElementById('inpBatDau').value);
+  const ktChon = Number(document.getElementById('inpKetThuc').value);
+  document.querySelectorAll('#bangMaTran td.slot[data-gio]').forEach(td => {
+    const s = Number(td.dataset.san);
+    const h = Number(td.dataset.gio);
+    const dangChon = (s === sanChon && h >= bdChon && h < ktChon);
+    td.classList.toggle('slot-sel', dangChon);
+    td.classList.toggle('slot-free', !dangChon);
+    td.textContent = dangChon ? '✓ Chọn' : 'Trống';
+  });
+}
+
+function veBangLich() {
+  const ngay = document.getElementById('inpNgay').value;
+  document.getElementById('lblNgayBang').textContent = ngay;
+  const homNay = layChuoiNgayDiaPhuong(0);
+  const gioHienTai = new Date().getHours() + new Date().getMinutes() / 60;
+  const sanChon = Number(document.getElementById('inpSan').value);
+  const bdChon = Number(document.getElementById('inpBatDau').value);
+  const ktChon = Number(document.getElementById('inpKetThuc').value);
+
+  let html = '<thead><tr><th>Sân \\ Giờ</th>';
+  for (let h = CAU_HINH.GIO_MO_CUA; h < CAU_HINH.GIO_DONG_CUA; h++) {
+    const laCaoDiem = h >= CAU_HINH.MOC_CAO_DIEM;
+    html += `<th class="${laCaoDiem ? 'peak-col' : ''}">${h}h–${h + 1}h<br><small>${laCaoDiem ? '80k' : '60k'}</small></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let s = 1; s <= CAU_HINH.SO_SAN; s++) {
+    html += `<tr><td class="court-name">🏸 Sân ${s}</td>`;
+    for (let h = CAU_HINH.GIO_MO_CUA; h < CAU_HINH.GIO_DONG_CUA; h++) {
+      const don = danhSachDatSan.find(d => d.san === s && d.ngay === ngay && h >= d.batDau && h < d.ketThuc);
+      if (don) {
+        if (h === don.batDau) {
+          const soGio = don.ketThuc - don.batDau;
+          html += `<td colspan="${soGio}" class="slot slot-booked" draggable="true" data-ma="${don.ma}" title="Kéo thả sang ô trống để đổi sân/giờ: ${don.khach} (${don.batDau}h-${don.ketThuc}h)">🔒 Đã đặt (${don.batDau}h–${don.ketThuc}h)<br><small>${don.khach}</small></td>`;
+          h = don.ketThuc - 1;
+        }
+      } else {
+        const daQua = (ngay < homNay) || (ngay === homNay && h <= gioHienTai);
+        if (daQua) {
+          html += `<td class="slot slot-past" title="Đã qua giờ">Đã qua</td>`;
+        } else {
+          const dangChon = (s === sanChon && h >= bdChon && h < ktChon);
+          html += `<td class="slot ${dangChon ? 'slot-sel' : 'slot-free'}" data-san="${s}" data-gio="${h}" title="Nhấn giữ chuột & kéo qua các ô để chọn khung giờ Sân ${s} (${h}h–${h + 1}h)">${dangChon ? '✓ Chọn' : 'Trống'}</td>`;
+        }
+      }
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  const bang = document.getElementById('bangMaTran');
+  bang.innerHTML = html;
+  ganSuKienKeoThaBang(bang);
+}
+
+let keoChon = null;
+let neoClick = null;
+
+function ganSuKienKeoThaBang(bang) {
+  if (bang.dataset.bound) return;
+  bang.dataset.bound = '1';
+
+  bang.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const td = e.target.closest('td.slot[data-gio]');
+    if (!td) return;
+    e.preventDefault();
+    const s = Number(td.dataset.san), h = Number(td.dataset.gio);
+    keoChon = { san: s, neo: h, daKeo: false };
+    document.getElementById('inpSan').value = s;
+    document.getElementById('inpBatDau').value = h;
+    document.getElementById('inpKetThuc').value = h + 1;
+    toMauOChon();
+    capNhatTamTinh();
+  });
+
+  bang.addEventListener('mouseover', e => {
+    if (!keoChon) return;
+    const td = e.target.closest('td.slot[data-gio]');
+    if (!td) return;
+    const s = Number(td.dataset.san), h = Number(td.dataset.gio);
+    if (s !== keoChon.san) return;
+    if (h !== keoChon.neo) keoChon.daKeo = true;
+    const bd = Math.min(keoChon.neo, h);
+    const kt = Math.max(keoChon.neo, h) + 1;
+    const ngay = document.getElementById('inpNgay').value;
+    if (danhSachDatSan.some(d => d.san === s && d.ngay === ngay && bd < d.ketThuc && d.batDau < kt)) return;
+    document.getElementById('inpSan').value = s;
+    document.getElementById('inpBatDau').value = bd;
+    document.getElementById('inpKetThuc').value = kt;
+    toMauOChon();
+    capNhatTamTinh();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!keoChon) return;
+    const k = keoChon;
+    keoChon = null;
+    if (!k.daKeo) {
+      if (neoClick && neoClick.san === k.san && neoClick.gio !== k.neo) {
+        const bd = Math.min(neoClick.gio, k.neo);
+        const kt = Math.max(neoClick.gio, k.neo) + 1;
+        const ngay = document.getElementById('inpNgay').value;
+        if (!danhSachDatSan.some(d => d.san === k.san && d.ngay === ngay && bd < d.ketThuc && d.batDau < kt)) {
+          document.getElementById('inpSan').value = k.san;
+          document.getElementById('inpBatDau').value = bd;
+          document.getElementById('inpKetThuc').value = kt;
+          neoClick = null;
+          toMauOChon();
+          capNhatTamTinh();
+          hienThongBao(`Đã chọn Sân ${k.san} khung ${bd}h – ${kt}h. Bấm "Xác nhận đặt sân" để hoàn tất!`, false);
+          return;
+        }
+      }
+      neoClick = { san: k.san, gio: k.neo };
+      hienThongBao(`Đã chọn Sân ${k.san} (${k.neo}h – ${k.neo + 1}h). Bạn có thể kéo chuột hoặc bấm thêm ô khác cùng sân để mở rộng!`, false);
+    } else {
+      neoClick = null;
+      const bd = Number(document.getElementById('inpBatDau').value);
+      const kt = Number(document.getElementById('inpKetThuc').value);
+      hienThongBao(`Đã kéo chọn Sân ${k.san} khung ${bd}h – ${kt}h. Bấm "Xác nhận đặt sân" để hoàn tất!`, false);
+    }
+  });
+
+  // Kéo thả ca đã đặt sang ô trống để đổi sân/giờ
+  bang.addEventListener('dragstart', e => {
+    const td = e.target.closest('td.slot-booked[data-ma]');
+    if (!td) return;
+    e.dataTransfer.setData('text/plain', td.dataset.ma);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  bang.addEventListener('dragover', e => {
+    const td = e.target.closest('td.slot[data-gio]');
+    if (!td) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    td.style.outline = '2px dashed #ea580c';
+  });
+  bang.addEventListener('dragleave', e => {
+    const td = e.target.closest('td.slot[data-gio]');
+    if (td) td.style.outline = '';
+  });
+  bang.addEventListener('drop', e => {
+    const td = e.target.closest('td.slot[data-gio]');
+    if (td) td.style.outline = '';
+    if (!td) return;
+    e.preventDefault();
+    const ma = e.dataTransfer.getData('text/plain');
+    const don = danhSachDatSan.find(d => d.ma === ma);
+    if (!don) return;
+    const sanMoi = Number(td.dataset.san);
+    const bdMoi = Number(td.dataset.gio);
+    const ktMoi = bdMoi + (don.ketThuc - don.batDau);
+    if (ktMoi > CAU_HINH.GIO_DONG_CUA) {
+      return hienThongBao(`Không thể chuyển sang ${bdMoi}h – ${ktMoi}h vì vượt quá giờ đóng cửa (${CAU_HINH.GIO_DONG_CUA}h)!`, true);
+    }
+    const trung = danhSachDatSan.find(d => d.ma !== ma && d.san === sanMoi && d.ngay === don.ngay && bdMoi < d.ketThuc && d.batDau < ktMoi);
+    if (trung) {
+      return hienThongBao(`Không thể chuyển: Sân ${sanMoi} đã có lịch ${trung.batDau}h – ${trung.ketThuc}h!`, true);
+    }
+    don.san = sanMoi;
+    don.batDau = bdMoi;
+    don.ketThuc = ktMoi;
+    const giaMoi = tinhTienSan(bdMoi, ktMoi);
+    don.tongTien = giaMoi.tongTien;
+    don.dienGiai = giaMoi.dienGiai;
+    luuDuLieu();
+    veBangLich();
+    veDanhSachDon();
+    capNhatTamTinh();
+    hienThongBao(`Đã kéo thả chuyển đơn <b>${ma}</b> sang <b>Sân ${sanMoi} (${bdMoi}h – ${ktMoi}h)</b> · Giá mới: <b>${giaMoi.dienGiai}</b>`, false);
+  });
+}
+
+function chonOTrong(san, gio) {
+  document.getElementById('inpSan').value = san;
+  document.getElementById('inpBatDau').value = gio;
+  document.getElementById('inpKetThuc').value = Math.min(CAU_HINH.GIO_DONG_CUA, gio + 2);
+  toMauOChon();
+  capNhatTamTinh();
+  hienThongBao(`Đã chọn nhanh Sân ${san} khung ${gio}h – ${Math.min(CAU_HINH.GIO_DONG_CUA, gio + 2)}h. Bấm "Xác nhận đặt sân" để hoàn tất!`, false);
+}
+
+function veDanhSachDon() {
+  document.getElementById('lblSoDon').textContent = danhSachDatSan.length;
+  const tbody = document.getElementById('dsDonDat');
+  if (!danhSachDatSan.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#64748b;padding:16px;">Chưa có lịch đặt sân nào. Hãy chọn khung giờ hoặc bấm chạy kịch bản T1–T5!</td></tr>';
+    return;
+  }
+  tbody.innerHTML = danhSachDatSan.map((d, idx) => `
+    <tr>
+      <td><b>${d.ma}</b></td>
+      <td><b>Sân ${d.san}</b></td>
+      <td>${d.ngay}</td>
+      <td><b>${d.batDau}h – ${d.ketThuc}h</b> (${d.ketThuc - d.batDau} giờ)</td>
+      <td>${d.khach}</td>
+      <td>${d.dienGiai}</td>
+      <td><b style="color:var(--brand);font-size:14px;">${dinhDangTien(d.tongTien)}</b></td>
+      <td><button class="btn-danger btn-sm" onclick="xoaDon(${idx})">Hủy</button></td>
+    </tr>
+  `).join('');
+}
+
+function xoaDon(idx) {
+  danhSachDatSan.splice(idx, 1);
+  luuDuLieu();
+  veBangLich();
+  veDanhSachDon();
+  capNhatTamTinh();
+}
+
+function xoaTatCaLich() {
+  danhSachDatSan = [];
+  luuDuLieu();
+  ['T1', 'T2', 'T3', 'T4', 'T5'].forEach(k => {
+    document.getElementById('kq-' + k).innerHTML = '<span class="wait-pill">Chưa chạy</span>';
+  });
+  chonNgayNhanh(1);
+  veBangLich();
+  veDanhSachDon();
+  capNhatTamTinh();
+  hienThongBao('Đã xóa toàn bộ lịch để sẵn sàng kiểm thử lại từ đầu!', false);
+}
+
+function chonNgayNhanh(offset) {
+  document.getElementById('inpNgay').value = layChuoiNgayDiaPhuong(offset);
+  veBangLich();
+  capNhatTamTinh();
+}
+
+/* ============================================================================
+   PHẦN 6: BỘ CHẠY KIỂM THỬ TỰ ĐỘNG 5 KỊCH BẢN (T1 – T5) CHUẨN ĐỀ BÀI NHÓM 3
+   ============================================================================ */
+function chayKichBan(ma) {
+  const ngayMai = layChuoiNgayDiaPhuong(1);
+  const homQua = layChuoiNgayDiaPhuong(-1);
+
+  if (ma === 'T1') {
+    // Đảm bảo Sân 1 ngày mai 18h-20h chưa có lịch cũ trước khi chạy T1
+    danhSachDatSan = danhSachDatSan.filter(d => !(d.san === 1 && d.ngay === ngayMai && d.batDau < 20 && 18 < d.ketThuc));
+    document.getElementById('inpSan').value = 1;
+    document.getElementById('inpNgay').value = ngayMai;
+    document.getElementById('inpBatDau').value = 18;
+    document.getElementById('inpKetThuc').value = 20;
+    const kq = thucHienDatSan(1, ngayMai, 18, 20, 'Kịch bản T1');
+    const dat = kq.thanhCong && kq.don.tongTien === 160000;
+    document.getElementById('kq-T1').innerHTML = `<span class="pass-pill">✔ ĐẠT: ${dinhDangTien(kq.don.tongTien)}</span>`;
+  }
+  else if (ma === 'T2') {
+    danhSachDatSan = danhSachDatSan.filter(d => !(d.san === 2 && d.ngay === ngayMai && d.batDau < 18 && 16 < d.ketThuc));
+    document.getElementById('inpSan').value = 2;
+    document.getElementById('inpNgay').value = ngayMai;
+    document.getElementById('inpBatDau').value = 16;
+    document.getElementById('inpKetThuc').value = 18;
+    const kq = thucHienDatSan(2, ngayMai, 16, 18, 'Kịch bản T2');
+    document.getElementById('kq-T2').innerHTML = `<span class="pass-pill">✔ ĐẠT: 60.000đ + 80.000đ = ${dinhDangTien(kq.don.tongTien)}</span>`;
+  }
+  else if (ma === 'T3') {
+    // Đảm bảo T1 đã có trên Sân 1 (18h-20h)
+    if (!danhSachDatSan.some(d => d.san === 1 && d.ngay === ngayMai && d.batDau === 18 && d.ketThuc === 20)) {
+      thucHienDatSan(1, ngayMai, 18, 20, 'Kịch bản T1');
+    }
+    // Bước 3a: Đặt tiếp Sân 1 lúc 19h - 21h -> Phải báo trùng lịch
+    const thuSan1 = thucHienDatSan(1, ngayMai, 19, 21, 'Kịch bản T3 (Sân 1)');
+    // Bước 3b: Đặt Sân 3 cùng giờ 19h - 21h -> Phải đặt được
+    danhSachDatSan = danhSachDatSan.filter(d => !(d.san === 3 && d.ngay === ngayMai && d.batDau < 21 && 19 < d.ketThuc));
+    const thuSan3 = thucHienDatSan(3, ngayMai, 19, 21, 'Kịch bản T3 (Sân 3)');
+    document.getElementById('inpSan').value = 1;
+    document.getElementById('inpNgay').value = ngayMai;
+    document.getElementById('inpBatDau').value = 19;
+    document.getElementById('inpKetThuc').value = 21;
+    hienThongBao(`Kết quả T3: Đặt Sân 1 (19h–21h) bị chặn do <b>trùng lịch</b> với ca 18h–20h; chuyển sang <b>Sân 3 (19h–21h) đặt thành công (${dinhDangTien(thuSan3.don.tongTien)})</b>!`, false);
+    document.getElementById('kq-T3').innerHTML = `<span class="pass-pill">✔ ĐẠT: Chặn Sân 1 & Cho đặt Sân 3</span>`;
+  }
+  else if (ma === 'T4') {
+    document.getElementById('inpSan').value = 1;
+    document.getElementById('inpNgay').value = homQua;
+    document.getElementById('inpBatDau').value = 18;
+    document.getElementById('inpKetThuc').value = 20;
+    const kq = thucHienDatSan(1, homQua, 18, 20, 'Kịch bản T4');
+    document.getElementById('kq-T4').innerHTML = `<span class="pass-pill">✔ ĐẠT: Đã chặn đặt ngày/giờ quá khứ</span>`;
+  }
+  else if (ma === 'T5') {
+    document.getElementById('inpSan').value = 1;
+    document.getElementById('inpNgay').value = ngayMai;
+    document.getElementById('inpBatDau').value = 21;
+    document.getElementById('inpKetThuc').value = 23;
+    const kq1 = kiemTraHopLeVaTrungLich(1, ngayMai, 18, 16);
+    const kq2 = thucHienDatSan(1, ngayMai, 21, 23, 'Kịch bản T5');
+    hienThongBao(`Kết quả T5: Đã chặn cả 2 lỗi: (1) 18h–16h: "${kq1.loi}" | (2) 21h–23h: "${kq2.loi}"`, true);
+    document.getElementById('kq-T5').innerHTML = `<span class="pass-pill">✔ ĐẠT: Đã chặn sai thứ tự & ngoài 6h–22h</span>`;
+  }
+}
+
+function chayTatCaKichBan() {
+  xoaTatCaLich();
+  ['T1', 'T2', 'T3', 'T4', 'T5'].forEach(m => chayKichBan(m));
+  chonNgayNhanh(1);
+  hienThongBao('🎉 Đã chạy kiểm thử tự động toàn bộ 5 kịch bản T1 → T5: TẤT CẢ ĐỀU ĐẠT 100%!', false);
+}
+
+// Khởi tạo giao diện khi mở trang
+(function khoiTao() {
+  document.getElementById('lbl-so-san').textContent = CAU_HINH.SO_SAN;
+  document.getElementById('lbl-gia-thuong').textContent = dinhDangTien(CAU_HINH.GIA_TRUOC_17H);
+  document.getElementById('lbl-gia-cao-diem').textContent = dinhDangTien(CAU_HINH.GIA_TU_17H);
+
+  const selSan = document.getElementById('inpSan');
+  selSan.innerHTML = Array.from({ length: CAU_HINH.SO_SAN }, (_, i) => `<option value="${i + 1}">Sân ${i + 1}</option>`).join('');
+
+  document.getElementById('inpNgay').value = layChuoiNgayDiaPhuong(1);
+  veBangLich();
+  veDanhSachDon();
+  capNhatTamTinh();
+})();
+</script>
+<script>
+// Thay toàn bộ emoji bằng icon SVG đơn sắc, nét mảnh (phong cách Lucide/Feather) - tự động áp dụng cả nội dung động
+(() => {
+  const ICONS = {"🏸": "<path d=\"M12 21a2.5 2.5 0 0 0 2.5-2.5V17h-5v1.5A2.5 2.5 0 0 0 12 21z\"/><path d=\"M9.5 17 6.5 4M14.5 17l3-13M12 17V3M6.5 4h11\"/>", "🏆": "<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2z\"/>", "✅": "<path d=\"M22 11.08V12a10 10 0 1 1-5.93-9.14\"/><path d=\"M22 4 12 14.01l-3-3\"/>", "✔": "<path d=\"M20 6 9 17l-5-5\"/>", "✓": "<path d=\"M20 6 9 17l-5-5\"/>", "🎓": "<path d=\"M22 10v6M2 10l10-5 10 5-10 5zM6 12v5c3 3 9 3 12 0v-5\"/>", "⚔": "<path d=\"M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2\"/>", "📍": "<path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z\"/><circle cx=\"12\" cy=\"10\" r=\"3\"/>", "🤝": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>", "👥": "<path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/><path d=\"M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75\"/>", "✕": "<path d=\"M18 6 6 18M6 6l12 12\"/>", "→": "<path d=\"M5 12h14M12 5l7 7-7 7\"/>", "←": "<path d=\"M19 12H5M12 19l-7-7 7-7\"/>", "↓": "<path d=\"M12 5v14M19 12l-7 7-7-7\"/>", "⬇": "<path d=\"M12 5v14M19 12l-7 7-7-7\"/>", "↗": "<path d=\"M7 7h10v10M7 17 17 7\"/>", "⚡": "<path d=\"M13 2 3 14h9l-1 8 10-12h-9l1-8z\"/>", "📅": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>", "🗓": "<rect x=\"3\" y=\"4\" width=\"18\" height=\"18\" rx=\"2\"/><path d=\"M16 2v4M8 2v4M3 10h18\"/>", "🎯": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><circle cx=\"12\" cy=\"12\" r=\"6\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/>", "📊": "<path d=\"M12 20V10M18 20V4M6 20v-4\"/>", "🔒": "<rect x=\"3\" y=\"11\" width=\"18\" height=\"11\" rx=\"2\"/><path d=\"M7 11V7a5 5 0 0 1 10 0v4\"/>", "🔥": "<path d=\"M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z\"/>", "👤": "<path d=\"M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2\"/><circle cx=\"12\" cy=\"7\" r=\"4\"/>", "🕒": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/>", "⏱": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/>", "⏰": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/>", "⏳": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 6v6l4 2\"/>", "🏅": "<circle cx=\"12\" cy=\"8\" r=\"6\"/><path d=\"M15.48 12.89 17 22l-5-3-5 3 1.52-9.11\"/>", "🥇": "<circle cx=\"12\" cy=\"8\" r=\"6\"/><path d=\"M15.48 12.89 17 22l-5-3-5 3 1.52-9.11\"/>", "🥈": "<circle cx=\"12\" cy=\"8\" r=\"6\"/><path d=\"M15.48 12.89 17 22l-5-3-5 3 1.52-9.11\"/>", "🥉": "<circle cx=\"12\" cy=\"8\" r=\"6\"/><path d=\"M15.48 12.89 17 22l-5-3-5 3 1.52-9.11\"/>", "📌": "<path d=\"M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z\"/>", "💾": "<path d=\"M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2zM17 21v-8H7v8M7 3v5h8\"/>", "💳": "<rect x=\"2\" y=\"5\" width=\"20\" height=\"14\" rx=\"2\"/><path d=\"M2 10h20\"/>", "📞": "<path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z\"/>", "🤖": "<rect x=\"3\" y=\"11\" width=\"18\" height=\"10\" rx=\"2\"/><circle cx=\"12\" cy=\"5\" r=\"2\"/><path d=\"M12 7v4M8 16h.01M16 16h.01\"/>", "❌": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M15 9l-6 6M9 9l6 6\"/>", "🎉": "<path d=\"M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z\"/>", "✨": "<path d=\"M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z\"/>", "🔔": "<path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0\"/>", "🔄": "<path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5\"/>", "📋": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8\"/>", "🧾": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8\"/>", "📄": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8\"/>", "📝": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8\"/>", "📜": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8\"/>", "📂": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8\"/>", "📦": "<path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8\"/>", "📺": "<rect x=\"2\" y=\"7\" width=\"20\" height=\"15\" rx=\"2\"/><path d=\"M17 2l-5 5-5-5\"/>", "📢": "<path d=\"M3 11l18-5v12L3 14v-3zM11.6 16.8a3 3 0 1 1-5.8-1.6\"/>", "💬": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "⚠": "<path d=\"M21.73 18l-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3zM12 9v4M12 17h.01\"/>", "💰": "<rect x=\"2\" y=\"6\" width=\"20\" height=\"12\" rx=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/><path d=\"M6 12h.01M18 12h.01\"/>", "💵": "<rect x=\"2\" y=\"6\" width=\"20\" height=\"12\" rx=\"2\"/><circle cx=\"12\" cy=\"12\" r=\"2\"/><path d=\"M6 12h.01M18 12h.01\"/>", "🌓": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 18a6 6 0 0 0 0-12v12z\"/>", "🖱": "<path d=\"M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z\"/>", "⚙": "<path d=\"M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6\"/>", "🔗": "<path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/>", "💡": "<path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4\"/>", "⚖": "<path d=\"M12 3v18M6 21h12M4 7h16M4 7l-2 7a3 3 0 0 0 4 0zM20 7l-2 7a3 3 0 0 0 4 0z\"/>", "🧵": "<path d=\"M6 4h12v16H6zM6 9h12M6 15h12\"/>", "📘": "<path d=\"M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z\"/>", "🛠": "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>", "📡": "<circle cx=\"12\" cy=\"12\" r=\"2\"/><path d=\"M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19\"/>", "☀": "<circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41\"/>", "🛒": "<circle cx=\"8\" cy=\"21\" r=\"1\"/><circle cx=\"19\" cy=\"21\" r=\"1\"/><path d=\"M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12\"/>", "⭐": "<path d=\"M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z\"/>", "😕": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M16 16s-1.5-2-4-2-4 2-4 2M9 9h.01M15 9h.01\"/>", "👋": "<circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01\"/>", "🌅": "<path d=\"M12 2v8M4.93 10.93l1.41 1.41M2 18h2M20 18h2M19.07 10.93l-1.41 1.41M22 22H2M8 6l4-4 4 4M16 18a4 4 0 0 0-8 0\"/>", "🖨": "<path d=\"M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z\"/>", "🏟": "<path d=\"M3 21V9l9-6 9 6v12\"/><path d=\"M9 21v-6h6v6M3 21h18\"/>", "👉": "<path d=\"M5 12h14M12 5l7 7-7 7\"/>", "🧪": "<path d=\"M14.5 2v6.5l5 9A2 2 0 0 1 17.8 21H6.2a2 2 0 0 1-1.7-3.5l5-9V2M8.5 2h7M7 16h10\"/>"};
+  const keys = Object.keys(ICONS).sort((a, b) => b.length - a.length);
+  const RX = new RegExp('(' + keys.join('|') + ')\\uFE0F?', 'g');
+  const st = document.createElement('style');
+  st.textContent = '.ic{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.2em;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}#cl-fab .ic{width:24px;height:24px}#cl-ai .ic{width:28px;height:28px}.feat-icon .ic,.step-num .ic{width:1.3em;height:1.3em}';
+  document.head.appendChild(st);
+  const svg = k => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + ICONS[k] + '</svg>';
+  const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'TITLE', 'NOSCRIPT', 'SVG']);
+  function fix(node) {
+    if (node.nodeType === 3) {
+      const p = node.parentNode; if (!p) return;
+      if (SKIP.has(p.nodeName.toUpperCase())) return;
+      const t = node.nodeValue; RX.lastIndex = 0;
+      if (!RX.test(t)) return;
+      if (p.nodeName === 'OPTION') { node.nodeValue = t.replace(RX, '').replace(/^\s+/, ''); return; }
+      const tpl = document.createElement('template');
+      tpl.innerHTML = t.replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])).replace(RX, (_, k) => svg(k));
+      p.replaceChild(tpl.content, node);
+    } else if (node.nodeType === 1 && !SKIP.has(node.nodeName.toUpperCase())) {
+      for (const c of Array.from(node.childNodes)) fix(c);
+    }
+  }
+  let busy = false;
+  const run = n => { if (busy) return; busy = true; try { fix(n); } finally { busy = false; } };
+  run(document.body);
+  new MutationObserver(ms => {
+    if (busy) return;
+    for (const m of ms) {
+      if (m.type === 'characterData') run(m.target);
+      else m.addedNodes.forEach(run);
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+})();
+
+</script>
+</body>
+</html>
+

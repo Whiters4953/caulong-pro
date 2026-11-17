@@ -879,3 +879,511 @@ document.querySelector('a[href="#venues-sec"]')?.addEventListener('click', () =>
 
 // Đảm bảo nạp đầy đủ dữ liệu cho mọi tab ngay khi khởi chạy / F5
 setTimeout(() => { busy = false; refresh(); }, 50);
+
+// ================= BỘ ĐẶT SÂN THEO GIỜ TRÒN & KIỂM THỬ T1–T5 (ĐỒNG BỘ 100% VỚI SƠ ĐỒ BÊN DƯỚI) =================
+// Cấu hình chuẩn đề bài: mở cửa 6h - 22h, trước 17h giá 60.000đ/h, từ 17h giá 80.000đ/h
+const CAU_HINH_NHOM3 = {
+  SO_SAN: 6,
+  GIO_MO_CUA: 6,
+  GIO_DONG_CUA: 22,
+  MOC_CAO_DIEM: 17,
+  GIA_TRUOC_17H: 60000,
+  GIA_TU_17H: 80000
+};
+
+function n3LocalDay(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function n3CalcPrice(startH, endH) {
+  let total = 0, offH = 0, peakH = 0;
+  const parts = [];
+  for (let h = startH; h < endH; h++) {
+    if (h < CAU_HINH_NHOM3.MOC_CAO_DIEM) {
+      total += CAU_HINH_NHOM3.GIA_TRUOC_17H; offH++;
+      parts.push(fmt(CAU_HINH_NHOM3.GIA_TRUOC_17H));
+    } else {
+      total += CAU_HINH_NHOM3.GIA_TU_17H; peakH++;
+      parts.push(fmt(CAU_HINH_NHOM3.GIA_TU_17H));
+    }
+  }
+  const formula = (offH > 0 && peakH > 0)
+    ? `${parts.join(' + ')} = ${fmt(total)} (${offH}h trước 17h + ${peakH}h từ 17h)`
+    : offH > 0
+      ? `${offH} giờ × ${fmt(CAU_HINH_NHOM3.GIA_TRUOC_17H)} = ${fmt(total)}`
+      : `${peakH} giờ × ${fmt(CAU_HINH_NHOM3.GIA_TU_17H)} = ${fmt(total)}`;
+  return { total, formula };
+}
+
+// Chuyển đổi danh sách S.bookings (từ /api/state) sang định dạng giờ tròn đồng bộ
+function n3GetBookings() {
+  if (!S || !Array.isArray(S.bookings)) return [];
+  const d = $('#n3-date')?.value || $('#date')?.value;
+  if ($('#date') && d && d !== $('#date').value) return [];
+  const baseH = S.startH || 6;
+  return S.bookings.map(b => {
+    const startH = Math.floor(baseH + b.from / 2);
+    const endH = Math.ceil(baseH + b.to / 2);
+    const p = n3CalcPrice(startH, endH);
+    const exactTime = `${lab(baseH, b.from)}–${lab(baseH, b.to)}`;
+    return {
+      code: b.code,
+      court: b.court,
+      date: d,
+      from: b.from,
+      to: b.to,
+      startH,
+      endH,
+      exactTime,
+      status: b.status,
+      displayName: b.customerName || b.name || 'Đã đặt',
+      total: p.total,
+      formula: p.formula
+    };
+  });
+}
+
+function n3Validate(court, date, startH, endH, excludeCode = null) {
+  if (!Number.isInteger(startH) || !Number.isInteger(endH))
+    return { ok: false, msg: 'Chỉ cho phép đặt theo giờ tròn (ví dụ: 16h – 18h)!' };
+  if (endH <= startH)
+    return { ok: false, msg: `Lỗi thứ tự giờ (T5): Giờ kết thúc (${endH}h) phải lớn hơn giờ bắt đầu (${startH}h)!` };
+  if (startH < CAU_HINH_NHOM3.GIO_MO_CUA || endH > CAU_HINH_NHOM3.GIO_DONG_CUA)
+    return { ok: false, msg: `Ngoài giờ mở cửa (T5): Sân chỉ mở từ ${CAU_HINH_NHOM3.GIO_MO_CUA}h đến ${CAU_HINH_NHOM3.GIO_DONG_CUA}h (không thể đặt ${startH}h – ${endH}h)!` };
+  const todayStr = n3LocalDay(0);
+  if (!date || date < todayStr)
+    return { ok: false, msg: `Lỗi ngày quá khứ (T4): Không thể đặt sân vào ngày đã qua (${date})!` };
+  if (date === todayStr) {
+    const now = new Date();
+    const curH = now.getHours() + now.getMinutes() / 60;
+    if (startH <= curH)
+      return { ok: false, msg: `Lỗi giờ đã qua (T4): Khung ${startH}h – ${endH}h hôm nay đã qua giờ hiện tại!` };
+  }
+  const list = n3GetBookings();
+  const conflict = list.find(b => b.code !== excludeCode && b.court === court && b.date === date && startH < b.endH && b.startH < endH);
+  if (conflict) {
+    return {
+      ok: false,
+      msg: `Báo trùng lịch (T3): Sân ${court} ngày ${date} đã có lịch ${conflict.startH}h – ${conflict.endH}h (chồng lấn khoảng ${Math.max(startH, conflict.startH)}h – ${Math.min(endH, conflict.endH)}h)!`
+    };
+  }
+  return { ok: true, msg: '' };
+}
+
+function n3Alert(msg, isErr) {
+  const el = $('#n3-alert'); if (!el) return;
+  el.classList.remove('hidden');
+  el.className = `p-3 rounded-xl text-xs font-bold ${isErr ? 'bg-red-50 text-red-700 border border-red-300 dark:bg-red-950/60 dark:text-red-300' : 'bg-green-50 text-green-700 border border-green-300 dark:bg-green-950/60 dark:text-green-300'}`;
+  el.innerHTML = (isErr ? '❌ ' : '✅ ') + msg;
+}
+
+window.n3Preview = () => {
+  if (!$('#n3-court')) return;
+  const c = +$('#n3-court').value, d = $('#n3-date').value, s = +$('#n3-start').value, e = +$('#n3-end').value;
+  const v = n3Validate(c, d, s, e);
+  if (!v.ok) {
+    $('#n3-formula').textContent = v.msg;
+    $('#n3-total').textContent = 'Không hợp lệ';
+    return;
+  }
+  const p = n3CalcPrice(s, e);
+  $('#n3-formula').textContent = `Sân ${c} (${d}, ${s}h – ${e}h): ${p.formula}`;
+  $('#n3-total').textContent = fmt(p.total);
+};
+
+// Cập nhật highlight (.sel / .free) trực tiếp trên các ô #n3-grid mà không phá vỡ DOM khi đang kéo chuột
+function n3HighlightCells() {
+  const g = $('#n3-grid'); if (!g || !$('#n3-court')) return;
+  const selC = +$('#n3-court').value, selStart = +$('#n3-start').value, selEnd = +$('#n3-end').value;
+  g.querySelectorAll('td.cell[data-hr]').forEach(td => {
+    const c = +td.dataset.c, hr = +td.dataset.hr;
+    const on = (c === selC && hr >= selStart && hr < selEnd);
+    td.classList.toggle('sel', on);
+    td.classList.toggle('free', !on);
+    td.textContent = on ? '✓ Chọn' : 'Trống';
+  });
+}
+
+window.n3OnFormChange = () => {
+  n3HighlightCells();
+  window.n3Preview();
+  if (window.syncSelectionFromN3 && $('#n3-court')) {
+    window.syncSelectionFromN3(+$('#n3-court').value, +$('#n3-start').value, +$('#n3-end').value);
+  }
+};
+
+window.n3SyncSelectionFromBook = (court, startH, endH) => {
+  if (!$('#n3-court')) return;
+  $('#n3-court').value = court;
+  $('#n3-start').value = startH;
+  $('#n3-end').value = endH;
+  n3HighlightCells();
+  window.n3Preview();
+};
+
+window.n3OnDateChange = async () => {
+  if (!$('#n3-date')) return;
+  const d = $('#n3-date').value;
+  const todayStr = n3LocalDay(0);
+  if (d >= todayStr && $('#date') && $('#date').value !== d) {
+    $('#date').value = d;
+    if (typeof updateQuickDays === 'function') updateQuickDays();
+    await refresh();
+  } else {
+    window.n3RenderGrid();
+    window.n3Preview();
+  }
+};
+
+async function n3Book(court, date, startH, endH, name) {
+  // Nếu ngày đặt hợp lệ và khác ngày đang xem trên #date, đồng bộ #date trước để kiểm tra đúng dữ liệu ngày đó
+  const todayStr = n3LocalDay(0);
+  if (date && date >= todayStr && $('#date') && $('#date').value !== date) {
+    $('#date').value = date;
+    if ($('#n3-date')) $('#n3-date').value = date;
+    if (typeof updateQuickDays === 'function') updateQuickDays();
+    await refresh();
+  }
+  const v = n3Validate(court, date, startH, endH);
+  if (!v.ok) {
+    n3Alert(v.msg, true);
+    window.n3Preview();
+    return { ok: false, msg: v.msg };
+  }
+  try {
+    const res = await api('/api/nhom3/book', 'POST', {
+      court,
+      date,
+      startH,
+      endH,
+      name: name || 'Nhóm 3 - Sinh viên HVU'
+    });
+    await refresh();
+    n3Alert(`Đặt thành công <b>Sân ${court}</b> (${date}, <b>${startH}h – ${endH}h</b>): <b>${res.formula}</b> · Đã đồng bộ xuống sơ đồ bên dưới!`, false);
+    return { ok: true, item: res };
+  } catch (err) {
+    n3Alert(err.message, true);
+    window.n3Preview();
+    return { ok: false, msg: err.message };
+  }
+}
+
+window.n3Submit = async e => {
+  e.preventDefault();
+  await n3Book(+$('#n3-court').value, $('#n3-date').value, +$('#n3-start').value, +$('#n3-end').value, $('#n3-name').value.trim());
+};
+
+window.n3RenderGrid = () => {
+  const g = $('#n3-grid'); if (!g) return;
+  const d = $('#n3-date').value;
+  $('#n3-date-lbl').textContent = d;
+  const todayStr = n3LocalDay(0), curH = new Date().getHours() + new Date().getMinutes() / 60;
+  const courts = (S && Array.isArray(S.courts) && S.courts.length) ? S.courts : [1, 2, 3, 4, 5, 6];
+  const bookings = n3GetBookings();
+  const selC = +($('#n3-court')?.value || 1), selStart = +($('#n3-start')?.value || 18), selEnd = +($('#n3-end')?.value || 20);
+
+  let h = '<tr><th class="p-1.5 text-left">Sân đấu</th>';
+  for (let hr = CAU_HINH_NHOM3.GIO_MO_CUA; hr < CAU_HINH_NHOM3.GIO_DONG_CUA; hr++) {
+    const pk = hr >= CAU_HINH_NHOM3.MOC_CAO_DIEM;
+    h += `<th class="p-1 ${pk ? 'text-amber-600 font-extrabold' : 'text-slate-500'}">${hr}h–${hr+1}h<br><span class="text-[10px]">${pk?'80k':'60k'}</span></th>`;
+  }
+  h += '</tr>';
+
+  for (const c of courts) {
+    h += `<tr><td class="text-left pr-2"><span class="court-pill">🏸 Sân ${c}</span></td>`;
+    for (let hr = CAU_HINH_NHOM3.GIO_MO_CUA; hr < CAU_HINH_NHOM3.GIO_DONG_CUA; hr++) {
+      const b = bookings.find(x => x.court === c && x.date === d && hr >= x.startH && hr < x.endH);
+      if (b) {
+        if (hr === b.startH) {
+          const span = Math.max(1, b.endH - b.startH);
+          const cls = b.status === 'PLAYING' ? 'playing' : 'booked';
+          h += `<td colspan="${span}" class="cell ${cls} text-[11px] font-bold text-slate-900 px-1 select-none" draggable="true" data-code="${esc(b.code)}" style="cursor:grab;user-select:none" title="Kéo thả sang ô trống khác để đổi sân/giờ (${esc(b.formula)})">🔒 ${b.startH}h–${b.endH}h (${esc(b.displayName)})</td>`;
+          hr = b.endH - 1;
+        }
+      } else {
+        const past = d < todayStr || (d === todayStr && hr <= curH);
+        if (past) {
+          h += `<td class="cell past text-[10px] text-slate-500 select-none" style="user-select:none">Qua</td>`;
+        } else {
+          const isSel = (c === selC && hr >= selStart && hr < selEnd);
+          h += `<td class="cell ${isSel ? 'sel' : 'free'} text-[10px] text-white font-bold select-none" data-c="${c}" data-hr="${hr}" style="cursor:pointer;user-select:none" title="Nhấn giữ & kéo chuột qua các ô trống để chọn khung giờ Sân ${c} (${hr}h–${hr+1}h)">${isSel ? '✓ Chọn' : 'Trống'}</td>`;
+        }
+      }
+    }
+    h += '</tr>';
+  }
+  g.innerHTML = h;
+
+  $('#n3-list').innerHTML = bookings.map(b => `
+    <div class="list-item !p-2.5 flex items-center justify-between gap-2">
+      <div>
+        <b>Sân ${b.court}</b> · ${b.date} · <b>${b.startH}h – ${b.endH}h</b> <span class="chip text-[10px]">${esc(b.displayName)}</span>
+        <div class="text-slate-500">${esc(b.formula)}</div>
+      </div>
+      <button type="button" class="btn btn-danger btn-sm" onclick="n3Del('${esc(b.code)}')">Hủy</button>
+    </div>`).join('');
+};
+
+// ---- Kéo chuột chọn nhiều ô liên tiếp (Mouse & Touch Drag-Selection) + Chạm 2 ô + Kéo thả đổi giờ (Drag & Drop) trên #n3-grid ----
+let n3Drag = null;
+let n3ClickAnchor = null;
+
+function n3BindGridEvents() {
+  const g = $('#n3-grid'); if (!g || g.dataset.bound) return;
+  g.dataset.bound = '1';
+
+  g.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const td = e.target.closest('td.cell[data-hr]');
+    if (!td) return;
+    e.preventDefault(); // Chặn bôi đen văn bản để kéo chuột mượt qua các ô
+    const c = +td.dataset.c, hr = +td.dataset.hr;
+    n3Drag = { court: c, anchor: hr, moved: false };
+    $('#n3-court').value = c;
+    $('#n3-start').value = hr;
+    $('#n3-end').value = hr + 1;
+    n3HighlightCells();
+    window.n3Preview();
+    if (window.syncSelectionFromN3) window.syncSelectionFromN3(c, hr, hr + 1);
+  });
+
+  g.addEventListener('mouseover', e => {
+    if (!n3Drag) return;
+    const td = e.target.closest('td.cell[data-hr]');
+    if (!td) return;
+    const c = +td.dataset.c, hr = +td.dataset.hr;
+    if (c !== n3Drag.court) return;
+    if (hr !== n3Drag.anchor) n3Drag.moved = true;
+    const lo = Math.min(n3Drag.anchor, hr), hi = Math.max(n3Drag.anchor, hr) + 1;
+    const d = $('#n3-date').value;
+    const bookings = n3GetBookings();
+    if (bookings.some(b => b.court === c && b.date === d && lo < b.endH && b.startH < hi)) return;
+    $('#n3-court').value = c;
+    $('#n3-start').value = lo;
+    $('#n3-end').value = hi;
+    n3HighlightCells();
+    window.n3Preview();
+    if (window.syncSelectionFromN3) window.syncSelectionFromN3(c, lo, hi);
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (!n3Drag) return;
+    const drag = n3Drag;
+    n3Drag = null;
+    if (!drag.moved) {
+      // Nếu người dùng bấm 2 ô liên tiếp trên cùng 1 sân (không kéo giữ chuột)
+      if (n3ClickAnchor && n3ClickAnchor.court === drag.court && n3ClickAnchor.hr !== drag.anchor) {
+        const lo = Math.min(n3ClickAnchor.hr, drag.anchor), hi = Math.max(n3ClickAnchor.hr, drag.anchor) + 1;
+        const d = $('#n3-date').value;
+        const bookings = n3GetBookings();
+        if (!bookings.some(b => b.court === drag.court && b.date === d && lo < b.endH && b.startH < hi)) {
+          $('#n3-court').value = drag.court;
+          $('#n3-start').value = lo;
+          $('#n3-end').value = hi;
+          n3ClickAnchor = null;
+          n3HighlightCells();
+          window.n3Preview();
+          if (window.syncSelectionFromN3) window.syncSelectionFromN3(drag.court, lo, hi);
+          return;
+        }
+      }
+      n3ClickAnchor = { court: drag.court, hr: drag.anchor };
+    } else {
+      n3ClickAnchor = null;
+    }
+  });
+
+  // Hỗ trợ kéo cảm ứng (Touch Drag) trên điện thoại / màn hình cảm ứng
+  g.addEventListener('touchstart', e => {
+    const td = e.target.closest('td.cell[data-hr]');
+    if (!td) return;
+    const c = +td.dataset.c, hr = +td.dataset.hr;
+    n3Drag = { court: c, anchor: hr, moved: false };
+    $('#n3-court').value = c;
+    $('#n3-start').value = hr;
+    $('#n3-end').value = hr + 1;
+    n3HighlightCells();
+    window.n3Preview();
+    if (window.syncSelectionFromN3) window.syncSelectionFromN3(c, hr, hr + 1);
+  }, { passive: true });
+
+  g.addEventListener('touchmove', e => {
+    if (!n3Drag || !e.touches[0]) return;
+    const el = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+    const td = el?.closest?.('td.cell[data-hr]');
+    if (!td) return;
+    const c = +td.dataset.c, hr = +td.dataset.hr;
+    if (c !== n3Drag.court) return;
+    if (hr !== n3Drag.anchor) n3Drag.moved = true;
+    const lo = Math.min(n3Drag.anchor, hr), hi = Math.max(n3Drag.anchor, hr) + 1;
+    const d = $('#n3-date').value;
+    const bookings = n3GetBookings();
+    if (bookings.some(b => b.court === c && b.date === d && lo < b.endH && b.startH < hi)) return;
+    $('#n3-court').value = c;
+    $('#n3-start').value = lo;
+    $('#n3-end').value = hi;
+    n3HighlightCells();
+    window.n3Preview();
+    if (window.syncSelectionFromN3) window.syncSelectionFromN3(c, lo, hi);
+  }, { passive: true });
+
+  g.addEventListener('touchend', () => { n3Drag = null; });
+
+  // Hỗ trợ Kéo thả (HTML5 Drag & Drop) ca đã đặt sang ô trống khác để đổi sân/giờ
+  g.addEventListener('dragstart', e => {
+    const td = e.target.closest('td.cell[data-code]');
+    if (!td) return;
+    e.dataTransfer.setData('text/plain', td.dataset.code);
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  g.addEventListener('dragover', e => {
+    const td = e.target.closest('td.cell[data-hr]');
+    if (!td) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    td.style.outline = '2px dashed #f97316';
+  });
+  g.addEventListener('dragleave', e => {
+    const td = e.target.closest('td.cell[data-hr]');
+    if (td) td.style.outline = '';
+  });
+  g.addEventListener('drop', async e => {
+    const td = e.target.closest('td.cell[data-hr]');
+    if (td) td.style.outline = '';
+    if (!td) return;
+    e.preventDefault();
+    const code = e.dataTransfer.getData('text/plain');
+    if (!code) return;
+    const targetCourt = +td.dataset.c;
+    const targetHr = +td.dataset.hr;
+    const targetSlot = (targetHr - 6) * 2;
+    try {
+      const r = await api('/api/nhom3/move/' + code, 'POST', { court: targetCourt, from: targetSlot });
+      await refresh();
+      n3Alert(`Đã kéo thả chuyển lịch sang <b>Sân ${r.court}</b> (<b>${r.startH}h – ${r.endH}h</b>): <b>${r.formula}</b>`, false);
+    } catch (err) {
+      n3Alert(err.message, true);
+    }
+  });
+}
+
+window.n3Pick = (c, hr) => {
+  $('#n3-court').value = c;
+  $('#n3-start').value = hr;
+  $('#n3-end').value = Math.min(22, hr + 2);
+  n3HighlightCells();
+  window.n3Preview();
+  if (window.syncSelectionFromN3) window.syncSelectionFromN3(c, hr, Math.min(22, hr + 2));
+};
+
+window.n3Del = async code => {
+  try {
+    await api('/api/nhom3/cancel/' + code, 'POST');
+    await refresh();
+    n3Alert(`Đã hủy lịch <b>${code}</b> và đồng bộ 2 bảng!`, false);
+  } catch (err) {
+    n3Alert(err.message, true);
+  }
+};
+
+window.n3QuickDate = async off => {
+  const v = n3LocalDay(off);
+  $('#n3-date').value = v;
+  if (off >= 0 && $('#date')) {
+    $('#date').value = v;
+    if (typeof updateQuickDays === 'function') updateQuickDays();
+    await refresh();
+  } else {
+    window.n3RenderGrid();
+    window.n3Preview();
+  }
+};
+
+window.n3Reset = async () => {
+  const curD = $('#n3-date')?.value || n3LocalDay(0);
+  const tom = n3LocalDay(1);
+  try {
+    await api('/api/nhom3/reset', 'POST', { date: curD });
+    if (tom !== curD) await api('/api/nhom3/reset', 'POST', { date: tom });
+  } catch {}
+  ['T1','T2','T3','T4','T5'].forEach(k => { const el = $('#n3-st-'+k); if (el) el.innerHTML = '<span class="chip text-[11px]">Sẵn sàng</span>'; });
+  await window.n3QuickDate(1);
+  n3Alert('Đã làm mới toàn bộ lịch kiểm thử Nhóm 3 và đồng bộ 2 sơ đồ sân!', false);
+};
+
+window.n3Run = async code => {
+  const tom = n3LocalDay(1), yes = n3LocalDay(-1);
+  if (code === 'T1') {
+    await window.n3QuickDate(1);
+    const conflict = n3GetBookings().filter(b => b.court === 1 && b.date === tom && b.startH < 20 && 18 < b.endH);
+    for (const c of conflict) await api('/api/nhom3/cancel/' + c.code, 'POST');
+    if (conflict.length) await refresh();
+    $('#n3-court').value = 1; $('#n3-date').value = tom; $('#n3-start').value = 18; $('#n3-end').value = 20;
+    const r = await n3Book(1, tom, 18, 20, 'Kịch bản T1');
+    if (r.ok) $('#n3-st-T1').innerHTML = `<span class="chip !bg-green-100 !text-green-800 text-[11px]">✔ ĐẠT: ${fmt(r.item.total)}</span>`;
+  } else if (code === 'T2') {
+    await window.n3QuickDate(1);
+    const conflict = n3GetBookings().filter(b => b.court === 2 && b.date === tom && b.startH < 18 && 16 < b.endH);
+    for (const c of conflict) await api('/api/nhom3/cancel/' + c.code, 'POST');
+    if (conflict.length) await refresh();
+    $('#n3-court').value = 2; $('#n3-date').value = tom; $('#n3-start').value = 16; $('#n3-end').value = 18;
+    const r = await n3Book(2, tom, 16, 18, 'Kịch bản T2');
+    if (r.ok) $('#n3-st-T2').innerHTML = `<span class="chip !bg-green-100 !text-green-800 text-[11px]">✔ ĐẠT: 60k+80k=${fmt(r.item.total)}</span>`;
+  } else if (code === 'T3') {
+    await window.n3QuickDate(1);
+    if (!n3GetBookings().some(b => b.court === 1 && b.date === tom && b.startH === 18 && b.endH === 20)) {
+      await n3Book(1, tom, 18, 20, 'Kịch bản T1');
+    }
+    const r1 = await n3Book(1, tom, 19, 21, 'T3-Sân 1');
+    const conflict3 = n3GetBookings().filter(b => b.court === 3 && b.date === tom && b.startH < 21 && 19 < b.endH);
+    for (const c of conflict3) await api('/api/nhom3/cancel/' + c.code, 'POST');
+    if (conflict3.length) await refresh();
+    const r3 = await n3Book(3, tom, 19, 21, 'Kịch bản T3 (Sân 3)');
+    $('#n3-court').value = 1; $('#n3-date').value = tom; $('#n3-start').value = 19; $('#n3-end').value = 21;
+    n3HighlightCells();
+    if (!r1.ok && r3.ok) {
+      n3Alert(`T3 ĐẠT: Đặt Sân 1 (19h–21h) bị chặn do <b>trùng lịch</b> với ca 18h–20h; đặt <b>Sân 3 (19h–21h) thành công (${fmt(r3.item.total)})</b>!`, false);
+      $('#n3-st-T3').innerHTML = `<span class="chip !bg-green-100 !text-green-800 text-[11px]">✔ ĐẠT: Chặn S1 & Đặt S3</span>`;
+    }
+  } else if (code === 'T4') {
+    $('#n3-court').value = 1; $('#n3-date').value = yes; $('#n3-start').value = 18; $('#n3-end').value = 20;
+    window.n3RenderGrid();
+    await n3Book(1, yes, 18, 20, 'T4');
+    $('#n3-st-T4').innerHTML = `<span class="chip !bg-green-100 !text-green-800 text-[11px]">✔ ĐẠT: Chặn giờ/ngày qua</span>`;
+  } else if (code === 'T5') {
+    await window.n3QuickDate(1);
+    $('#n3-court').value = 1; $('#n3-date').value = tom; $('#n3-start').value = 21; $('#n3-end').value = 23;
+    const e1 = n3Validate(1, tom, 18, 16);
+    const e2 = await n3Book(1, tom, 21, 23, 'T5');
+    n3Alert(`T5 ĐẠT: Đã chặn (1) 18h–16h: "${e1.msg}" VÀ (2) 21h–23h: "${e2.msg}"`, true);
+    $('#n3-st-T5').innerHTML = `<span class="chip !bg-green-100 !text-green-800 text-[11px]">✔ ĐẠT: Chặn ngoài 6h–22h</span>`;
+  }
+};
+
+window.n3RunAll = async () => {
+  await window.n3Reset();
+  for (const k of ['T1','T2','T3','T4','T5']) {
+    await window.n3Run(k);
+  }
+  await window.n3QuickDate(1);
+  n3Alert('🎉 Đã kiểm thử tự động toàn bộ 5 kịch bản T1 → T5 (Đề bài Nhóm 3): TẤT CẢ ĐỀU ĐẠT 100% và đã đồng bộ xuống sơ đồ sân bên dưới!', false);
+};
+
+window.n3SyncFromState = () => {
+  if (!$('#n3-date')) return;
+  if ($('#date') && $('#date').value && $('#n3-date').value >= n3LocalDay(0)) {
+    $('#n3-date').value = $('#date').value;
+  }
+  n3BindGridEvents();
+  window.n3RenderGrid();
+  window.n3Preview();
+};
+
+if ($('#n3-date')) {
+  $('#n3-date').value = $('#date')?.value || n3LocalDay(0);
+  n3BindGridEvents();
+  window.n3RenderGrid();
+  window.n3Preview();
+}

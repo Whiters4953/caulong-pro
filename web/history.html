@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="vi">
 <head>
 <meta charset="utf-8">
@@ -6,8 +6,7 @@
 <meta name="referrer" content="origin">
 <meta name="theme-color" content="#0f766e">
 <meta name="description" content="CầuLông Pro – Hệ sinh thái đặt sân cầu lông thời gian thực, tìm đối thủ ELO gần đây, lịch sử thi đấu BWF, tìm huấn luyện viên và quản lý giải đấu.">
-<title>Lịch sử thi đấu BWF & Bảng xếp hạng ELO – CầuLông Pro</title>
-<script>window.PAGE_TAB="history";</script>
+<title>CầuLông Pro – Lịch sử thi đấu BWF & Bảng xếp hạng ELO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
@@ -34,7 +33,7 @@ tailwind.config={
 <script src="/socket.io/socket.io.js"></script>
 <link rel="stylesheet" href="/style.css">
 </head>
-<body class="min-h-screen">
+<body data-page="history" class="min-h-screen">
 <a href="#main" class="sr-only focus:not-sr-only">Bỏ qua điều hướng</a>
 
 <!-- ===== HEADER ===== -->
@@ -70,7 +69,7 @@ tailwind.config={
 </header>
 
 <!-- ===== HERO ===== -->
-<section id="hero" class="hidden">
+<section id="hero">
   <div class="max-w-6xl mx-auto px-4 py-10 md:py-14 grid md:grid-cols-12 gap-8 items-center">
     <!-- Left -->
     <div class="md:col-span-7 space-y-5">
@@ -129,7 +128,7 @@ tailwind.config={
 <!-- =========================================================
      TAB 1: ĐẶT SÂN (BOOKING)
      ========================================================= -->
-<section id="t-book" class="hidden space-y-5">
+<section id="t-book" class="space-y-5">
 
   <!-- Trải nghiệm Cầu Lông Smash Club (Quick Hub Cards) -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -160,6 +159,130 @@ tailwind.config={
         <div class="font-bold text-sm truncate">CLB & Đan cước vợt</div>
         <div class="text-xs text-slate-500 truncate">Giao lưu vãng lai & BG80/65</div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== KHU VỰC ĐẶT LỊCH THEO GIỜ TRÒN & KIỂM THỬ T1-T5 (CHUẨN ĐỀ BÀI NHÓM 3) ===== -->
+  <div id="nhom3-box" class="card p-4 md:p-5 space-y-4 border-2 border-brand/30">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="font-extrabold text-lg md:text-xl">🎯 Đặt lịch sân theo giờ tròn (Chuẩn đề bài Nhóm 3)</h2>
+          <span class="chip text-xs">Đồng bộ 6 sân · Mở cửa 6h – 22h</span>
+          <span class="chip chip-accent text-xs">Trước 17h: 60.000đ/h · Từ 17h: 80.000đ/h</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">Nhấn giữ chuột &amp; kéo qua các ô trống để chọn nhiều giờ liên tiếp · Kéo thả ca đã đặt sang ô trống để đổi sân/giờ · Đồng bộ 100% với sơ đồ bên dưới.</p>
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        <button type="button" class="btn btn-primary btn-sm" onclick="n3RunAll()">▶ Chạy tự động T1 → T5</button>
+        <button type="button" class="btn btn-outline btn-sm" onclick="n3Reset()">🔄 Xóa lịch chấm lại</button>
+        <a href="/kiem-thu.html" target="_blank" class="btn btn-soft btn-sm">📄 Mở bản 1 file thuần ↗</a>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-12 gap-4 items-start">
+      <!-- Form đặt giờ tròn -->
+      <form id="n3Form" onsubmit="n3Submit(event)" class="lg:col-span-5 space-y-3 bg-slate-50/70 dark:bg-slate-800/40 p-3.5 rounded-2xl border border-[var(--line)]">
+        <div class="flex flex-wrap gap-1.5">
+          <button type="button" class="btn btn-soft btn-sm" onclick="n3QuickDate(0)">Hôm nay</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="n3QuickDate(1)">Ngày mai (T1–T3)</button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="n3QuickDate(-1)">Hôm qua (Test T4)</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5">
+          <label>Chọn sân (Sân 1–6)
+            <select id="n3-court" onchange="n3OnFormChange()">
+              <option value="1">Sân 1 (Chuẩn T1, T3–T5)</option>
+              <option value="2">Sân 2 (Chuẩn T2)</option>
+              <option value="3">Sân 3 (Chuẩn T3)</option>
+              <option value="4">Sân 4</option>
+              <option value="5">Sân 5</option>
+              <option value="6">Sân 6</option>
+            </select>
+          </label>
+          <label>Ngày đặt sân
+            <input type="date" id="n3-date" required onchange="n3OnDateChange()">
+          </label>
+          <label>Giờ bắt đầu (6h–21h)
+            <input type="number" id="n3-start" value="18" min="0" max="24" step="1" required oninput="n3OnFormChange()">
+          </label>
+          <label>Giờ kết thúc (7h–22h)
+            <input type="number" id="n3-end" value="20" min="0" max="24" step="1" required oninput="n3OnFormChange()">
+          </label>
+        </div>
+        <label>Tên người đặt (Dữ liệu mẫu)
+          <input type="text" id="n3-name" value="Nhóm 3 - Sinh viên HVU" required>
+        </label>
+        <div class="p-3 rounded-xl bg-teal-50/80 dark:bg-teal-950/50 border border-teal-300 dark:border-teal-800">
+          <div id="n3-formula" class="text-xs font-bold text-brand"></div>
+          <div id="n3-total" class="text-lg font-extrabold font-mono text-brand mt-0.5"></div>
+        </div>
+        <div id="n3-alert" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+        <button type="submit" class="btn btn-accent w-full">✅ Đặt lịch sân ngay</button>
+      </form>
+
+      <!-- Bảng 5 kịch bản T1 - T5 -->
+      <div class="lg:col-span-7 overflow-x-auto">
+        <table class="w-full text-xs border-collapse">
+          <thead>
+            <tr class="border-b border-[var(--line)] text-slate-500 text-left">
+              <th class="py-2 pr-2">Mã</th>
+              <th class="py-2 pr-2">Thao tác kiểm thử (Đề Nhóm 3)</th>
+              <th class="py-2 pr-2">Kết quả đúng</th>
+              <th class="py-2 pr-2">Trạng thái</th>
+              <th class="py-2">Chạy</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[var(--line)]">
+            <tr>
+              <td class="py-2 pr-2 font-extrabold">T1</td>
+              <td class="py-2 pr-2">Sân 1, ngày mai, <b>18h – 20h</b></td>
+              <td class="py-2 pr-2 font-mono font-bold">160.000đ</td>
+              <td class="py-2 pr-2" id="n3-st-T1"><span class="chip text-[11px]">Sẵn sàng</span></td>
+              <td class="py-2"><button type="button" class="btn btn-soft btn-sm" onclick="n3Run('T1')">Chạy T1</button></td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-2 font-extrabold">T2</td>
+              <td class="py-2 pr-2">Sân 2, ngày mai, <b>16h – 18h</b></td>
+              <td class="py-2 pr-2 font-mono font-bold">60.000đ + 80.000đ = 140.000đ</td>
+              <td class="py-2 pr-2" id="n3-st-T2"><span class="chip text-[11px]">Sẵn sàng</span></td>
+              <td class="py-2"><button type="button" class="btn btn-soft btn-sm" onclick="n3Run('T2')">Chạy T2</button></td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-2 font-extrabold">T3</td>
+              <td class="py-2 pr-2">Sau T1, đặt Sân 1 lúc <b>19h – 21h</b>;<br>đặt Sân 3 cùng giờ (19h – 21h)</td>
+              <td class="py-2 pr-2">Sân 1: <b>Báo trùng lịch</b>;<br>Sân 3: <b>Đặt được (160.000đ)</b></td>
+              <td class="py-2 pr-2" id="n3-st-T3"><span class="chip text-[11px]">Sẵn sàng</span></td>
+              <td class="py-2"><button type="button" class="btn btn-soft btn-sm" onclick="n3Run('T3')">Chạy T3</button></td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-2 font-extrabold">T4</td>
+              <td class="py-2 pr-2">Đặt <b>ngày hôm qua</b>, hoặc <b>giờ đã qua hôm nay</b></td>
+              <td class="py-2 pr-2 font-bold text-red-600">Không cho đặt</td>
+              <td class="py-2 pr-2" id="n3-st-T4"><span class="chip text-[11px]">Sẵn sàng</span></td>
+              <td class="py-2"><button type="button" class="btn btn-soft btn-sm" onclick="n3Run('T4')">Chạy T4</button></td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-2 font-extrabold">T5</td>
+              <td class="py-2 pr-2">Giờ kết thúc &le; bắt đầu (18h–16h); hoặc <b>21h – 23h</b></td>
+              <td class="py-2 pr-2 font-bold text-red-600">Báo lỗi (sai thứ tự / ngoài 6h–22h)</td>
+              <td class="py-2 pr-2" id="n3-st-T5"><span class="chip text-[11px]">Sẵn sàng</span></td>
+              <td class="py-2"><button type="button" class="btn btn-soft btn-sm" onclick="n3Run('T5')">Chạy T5</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Sơ đồ sân × 16 giờ tròn (6h - 22h) -->
+    <div class="space-y-2 pt-1">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <b class="text-sm">🗓 Lịch các khung giờ đã đặt (<span id="n3-date-lbl"></span> · 6h – 22h · Đồng bộ trực tiếp)</b>
+        <span class="text-slate-500">🖱 Nhấn giữ &amp; kéo qua các ô trống để chọn giờ · Kéo thả ca đã đặt sang ô trống để đổi sân/giờ</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table id="n3-grid" class="w-full text-center text-xs select-none" style="border-spacing:3px;min-width:680px;user-select:none;-webkit-user-select:none"></table>
+      </div>
+      <div id="n3-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1 text-xs"></div>
     </div>
   </div>
 
@@ -234,9 +357,9 @@ tailwind.config={
       <div>
         <div class="flex items-center gap-2">
           <h2 class="font-extrabold text-xl">Sơ đồ sân & giờ trống</h2>
-          <span class="chip text-xs">6 Sân tiêu chuẩn BWF</span>
+          <span class="chip text-xs">6 Sân tiêu chuẩn BWF · Đồng bộ trực tiếp</span>
         </div>
-        <p class="text-xs text-slate-500 mt-0.5">Chạm ô xanh đầu tiên để chọn giờ bắt đầu, chạm ô thứ hai cùng sân để kéo dài khung giờ thuê.</p>
+        <p class="text-xs text-slate-500 mt-0.5">Nhấn giữ chuột &amp; kéo qua các ô xanh (hoặc chạm 2 ô cùng sân) để chọn khung giờ · Kéo thả ca đã đặt sang ô trống để đổi sân/giờ.</p>
       </div>
       <div class="flex flex-wrap items-center gap-1.5">
         <button id="dayPrev" class="iconbtn" aria-label="Ngày trước">‹</button>
@@ -249,7 +372,7 @@ tailwind.config={
     <!-- Legend (Fixed color boxes) -->
     <div class="flex flex-wrap gap-x-5 gap-y-2 items-center text-xs font-semibold" style="color:var(--muted)">
       <span class="flex items-center gap-1.5"><i class="legend-box free"></i> Còn trống</span>
-      <span class="flex items-center gap-1.5"><i class="legend-box booked"></i> Đã đặt / Giữ chỗ</span>
+      <span class="flex items-center gap-1.5"><i class="legend-box booked"></i> Đã đặt / Giữ chỗ (Kéo thả để đổi giờ)</span>
       <span class="flex items-center gap-1.5"><i class="legend-box playing"></i> Đang thi đấu</span>
       <span class="flex items-center gap-1.5"><i class="legend-box past"></i> Đã qua giờ</span>
       <label class="ml-auto inline-flex items-center gap-2 text-xs font-bold cursor-pointer">
@@ -260,7 +383,7 @@ tailwind.config={
 
     <!-- Grid -->
     <div class="overflow-x-auto pb-1" id="gridwrap">
-      <table id="grid-book"></table>
+      <table id="grid-book" style="user-select:none;-webkit-user-select:none"></table>
     </div>
 
     <!-- Pick bar -->
@@ -390,7 +513,7 @@ tailwind.config={
 <!-- =========================================================
      TAB 3: LỊCH SỬ THI ĐẤU & BẢNG XẾP HẠNG ELO (MATCH HISTORY)
      ========================================================= -->
-<section id="t-history" class="space-y-4">
+<section id="t-history" class="hidden space-y-4">
   <!-- KPI Performance Summary -->
   <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="hist-kpi"></div>
 
@@ -1003,8 +1126,20 @@ tailwind.config={
 <!-- Toast -->
 <div id="toast" class="fixed bottom-24 md:bottom-4 right-4 bg-slate-800 text-white px-4 py-2.5 rounded-2xl hidden z-[60] max-w-xs" role="status"></div>
 
+<section style="max-width:1100px;margin:24px auto 110px;padding:16px 18px;border:1px solid var(--line,#1f3a52);border-radius:16px;text-align:center">
+  <b>📍 CầuLông Pro – Smash Club · Nhóm 3, K22-CNTT B, ĐH Hùng Vương (Phú Thọ)</b>
+  <div style="margin-top:6px;font-size:13px;opacity:.85">Mở cửa 6h–22h hàng ngày · Giá 60.000đ/h (trước 17h) · 80.000đ/h (từ 17h)</div>
+  <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+    <a href="https://zalo.me/0353154185" target="_blank" rel="noopener" style="background:#0068ff;color:#fff;padding:8px 16px;border-radius:999px;font-weight:700;text-decoration:none">💬 Zalo 0353154185</a>
+    <a href="https://www.facebook.com/" target="_blank" rel="noopener" style="background:#1877f2;color:#fff;padding:8px 16px;border-radius:999px;font-weight:700;text-decoration:none">📘 Facebook</a>
+    <a href="tel:0353154185" style="background:#16a34a;color:#fff;padding:8px 16px;border-radius:999px;font-weight:700;text-decoration:none">📞 Gọi ngay</a>
+    <button type="button" onclick="document.getElementById('cl-ai').click()" style="background:linear-gradient(135deg,#f97316,#db2777);color:#fff;padding:8px 16px;border-radius:999px;font-weight:700;border:0;cursor:pointer">🤖 Hỏi trợ lý AI</button>
+  </div>
+</section>
 <script src="/standalone.js"></script>
 <script src="/app.js"></script>
 <script src="/extra.js"></script>
+<script src="/assistant.js"></script>
+<script src="/icons.js"></script>
 </body>
 </html>

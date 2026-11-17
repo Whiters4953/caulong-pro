@@ -310,6 +310,45 @@ function head() {
   return h + '</tr>';
 }
 
+function syncBookPickUI(syncN3 = false) {
+  $$('#grid-book td.cell[data-s]').forEach(td => {
+    if (td.dataset.code || td.classList.contains('past')) return;
+    const c = +td.dataset.c, s = +td.dataset.s;
+    const on = sel && sel.court === c && s >= sel.from && s <= sel.to;
+    td.classList.toggle('sel', !!on);
+    td.classList.toggle('free', !on);
+  });
+  if (sel && S) {
+    $('#pick').classList.remove('hidden');
+    let sum = 0; for (let s = sel.from; s <= sel.to; s++) sum += slotPrice(s);
+    $('#pick-sum').textContent = `🏸 Sân ${sel.court} · ${lab(S.startH,sel.from)} – ${lab(S.startH,sel.to+1)} (${(sel.to-sel.from+1)*30} phút)`;
+    $('#pick-price').textContent = `Tổng ${fmt(sum)} · Cọc ${fmt(sum*(S.depositPct??30)/100)}`;
+    if (syncN3 && window.n3SyncSelectionFromBook) {
+      window.n3SyncSelectionFromBook(
+        sel.court,
+        Math.floor(S.startH + sel.from / 2),
+        Math.ceil(S.startH + (sel.to + 1) / 2)
+      );
+    }
+  } else {
+    $('#pick').classList.add('hidden');
+  }
+}
+
+window.syncSelectionFromN3 = (court, startH, endH) => {
+  if (!S) return;
+  const from = Math.max(0, (startH - S.startH) * 2);
+  const to = Math.min(S.slots - 1, (endH - S.startH) * 2 - 1);
+  if (from <= to) {
+    let allFree = true;
+    for (let k = from; k <= to; k++) if (cellState(court, k).cls !== 'free') { allFree = false; break; }
+    sel = allFree ? { court, from, to } : null;
+  } else {
+    sel = null;
+  }
+  syncBookPickUI(false);
+};
+
 function renderBook() {
   const only = $('#onlyFree').checked;
   let h = head();
@@ -319,42 +358,121 @@ function renderBook() {
     for (let s = 0; s < S.slots; s++) {
       const st = cellState(c, s);
       const on = sel && sel.court === c && s >= sel.from && s <= sel.to;
-      const tip = st.cls === 'free' ? `Sân ${c} · ${lab(S.startH,s)}–${lab(S.startH,s+1)} · ${fmt(slotPrice(s))}/30p` : st.b ? (isStaff() ? st.b.name : 'Đã có người đặt') : 'Đã qua giờ';
-      h += `<td class="cell ${on ? 'sel' : st.cls}" data-c="${c}" data-s="${s}" title="${esc(tip)}"></td>`;
+      if (st.b) {
+        const bName = st.b.customerName || st.b.name || 'Đã đặt';
+        const tip = `Sân ${c} · ${lab(S.startH, st.b.from)}–${lab(S.startH, st.b.to)} · ${bName} (Kéo thả sang ô trống để đổi sân/giờ)`;
+        h += `<td class="cell ${st.cls}" data-c="${c}" data-s="${s}" data-code="${esc(st.b.code)}" draggable="true" style="cursor:grab;user-select:none" title="${esc(tip)}"></td>`;
+      } else {
+        const tip = st.cls === 'free' ? `Sân ${c} · ${lab(S.startH,s)}–${lab(S.startH,s+1)} · ${fmt(slotPrice(s))}/30p (Kéo chuột để chọn nhiều ô)` : 'Đã qua giờ';
+        h += `<td class="cell ${on ? 'sel' : st.cls}" data-c="${c}" data-s="${s}" style="user-select:none" title="${esc(tip)}"></td>`;
+      }
     }
     h += '</tr>';
   }
   $('#grid-book').innerHTML = h;
 
   const r0 = S.rules[0], r1 = S.rules[1];
-  const isWk = [0,6].includes(new Date($('#date').value + 'T12:00:00').getDay());
+  const isWk = (S.weekendPct > 0) && [0,6].includes(new Date($('#date').value + 'T12:00:00').getDay());
   $('#rules').innerHTML = `
     <span>☀️ Giờ thường (06:00–${lab(S.startH,(S.rules[1]?.startMin-S.startH*60)/30|0)}): ${fmt(r0.perHour)}/giờ</span>
-    <span class="chip-accent">🔥 Giờ cao điểm: ${fmt(r1.perHour)}/giờ</span>
+    <span class="chip-accent">🔥 Giờ cao điểm (từ ${lab(S.startH,(S.rules[1]?.startMin-S.startH*60)/30|0)}): ${fmt(r1.perHour)}/giờ</span>
     ${isWk ? '<span class="chip-accent">📅 Áp dụng phụ thu cuối tuần</span>' : ''}
     <span class="ml-auto">💳 Đặt cọc giữ sân ${S.depositPct??30}%</span>
   `;
 
-  if (sel) {
-    $('#pick').classList.remove('hidden');
-    let sum = 0; for (let s = sel.from; s <= sel.to; s++) sum += slotPrice(s);
-    $('#pick-sum').textContent = `🏸 Sân ${sel.court} · ${lab(S.startH,sel.from)} – ${lab(S.startH,sel.to+1)} (${(sel.to-sel.from+1)*30} phút)`;
-    $('#pick-price').textContent = `Tổng ${fmt(sum)} · Cọc ${fmt(sum*(S.depositPct??30)/100)}`;
-  } else { $('#pick').classList.add('hidden'); }
+  syncBookPickUI(false);
 }
 
-$('#grid-book').onclick = e => {
+let bookDrag = null;
+let bookClickAnchor = null;
+
+$('#grid-book').onmousedown = e => {
+  if (e.button !== 0) return;
+  const td = e.target.closest('td.cell'); if (!td || td.dataset.code) return;
+  const c = +td.dataset.c, s = +td.dataset.s;
+  if (cellState(c, s).cls !== 'free') return toast('Khung giờ này không còn trống', 'warn');
+  e.preventDefault();
+  bookDrag = { court: c, anchor: s, moved: false };
+  sel = { court: c, from: s, to: s };
+  syncBookPickUI(true);
+};
+
+$('#grid-book').onmouseover = e => {
+  if (!bookDrag) return;
   const td = e.target.closest('td.cell'); if (!td) return;
   const c = +td.dataset.c, s = +td.dataset.s;
-  if (cellState(c,s).cls !== 'free') return toast('Khung giờ này không còn trống', 'warn');
-  if (sel && sel.court === c && s >= sel.from) {
-    for (let k = sel.from; k <= s; k++) if (cellState(c,k).cls !== 'free') { sel = { court:c, from:s, to:s }; return renderBook(); }
-    sel.to = s;
-  } else sel = { court:c, from:s, to:s };
-  renderBook();
+  if (c !== bookDrag.court) return;
+  if (s !== bookDrag.anchor) bookDrag.moved = true;
+  let lo = Math.min(bookDrag.anchor, s), hi = Math.max(bookDrag.anchor, s);
+  for (let k = lo; k <= hi; k++) {
+    if (cellState(c, k).cls !== 'free') return;
+  }
+  sel = { court: c, from: lo, to: hi };
+  syncBookPickUI(true);
 };
-$('#clear').onclick = () => { sel = null; renderBook(); };
-$('#date').onchange = () => { sel = null; refresh(); updateQuickDays(); };
+
+window.addEventListener('mouseup', () => {
+  if (!bookDrag) return;
+  const d = bookDrag; bookDrag = null;
+  if (!d.moved) {
+    if (bookClickAnchor && bookClickAnchor.court === d.court && bookClickAnchor.s !== d.anchor) {
+      const lo = Math.min(bookClickAnchor.s, d.anchor), hi = Math.max(bookClickAnchor.s, d.anchor);
+      let ok = true;
+      for (let k = lo; k <= hi; k++) if (cellState(d.court, k).cls !== 'free') { ok = false; break; }
+      if (ok) {
+        sel = { court: d.court, from: lo, to: hi };
+        bookClickAnchor = null;
+        syncBookPickUI(true);
+        return;
+      }
+    }
+    bookClickAnchor = { court: d.court, s: d.anchor };
+  } else {
+    bookClickAnchor = null;
+  }
+});
+
+// HTML5 Drag-and-Drop để đổi sân/giờ trên #grid-book
+$('#grid-book').ondragstart = e => {
+  const td = e.target.closest('td.cell[data-code]');
+  if (!td) return;
+  e.dataTransfer.setData('text/plain', td.dataset.code);
+  e.dataTransfer.effectAllowed = 'move';
+};
+$('#grid-book').ondragover = e => {
+  const td = e.target.closest('td.cell');
+  if (!td || td.dataset.code || td.classList.contains('past')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  td.style.outline = '2px dashed #f97316';
+};
+$('#grid-book').ondragleave = e => {
+  const td = e.target.closest('td.cell');
+  if (td) td.style.outline = '';
+};
+$('#grid-book').ondrop = async e => {
+  const td = e.target.closest('td.cell');
+  if (td) td.style.outline = '';
+  if (!td || td.dataset.code || td.classList.contains('past')) return;
+  e.preventDefault();
+  const code = e.dataTransfer.getData('text/plain');
+  if (!code) return;
+  const c = +td.dataset.c, s = +td.dataset.s;
+  try {
+    const r = await api('/api/nhom3/move/' + code, 'POST', { court: c, from: s });
+    toast(`Đã chuyển lịch sang Sân ${r.court} (${lab(S.startH, r.from)}–${lab(S.startH, r.to)}): ${fmt(r.amount)}`, 'ok');
+    await refresh();
+  } catch (err) {
+    toast(err.message, 'err');
+  }
+};
+
+$('#clear').onclick = () => { sel = null; bookClickAnchor = null; renderBook(); if (window.n3RenderGrid) window.n3RenderGrid(); };
+$('#date').onchange = () => {
+  sel = null; bookClickAnchor = null;
+  if ($('#n3-date')) $('#n3-date').value = $('#date').value;
+  refresh(); updateQuickDays();
+};
 $('#onlyFree').onchange = renderBook;
 
 function updateQuickDays() {
@@ -367,7 +485,10 @@ $('#quick').innerHTML = ['Hôm nay','Ngày mai','+2 ngày'].map((n,i) => `<butto
 $('#quick').onclick = e => {
   const i = e.target.dataset.d; if (i == null) return;
   const d = new Date(); d.setDate(d.getDate() + +i);
-  $('#date').value = iso(d); sel = null; refresh(); updateQuickDays();
+  const v = iso(d);
+  $('#date').value = v;
+  if ($('#n3-date')) $('#n3-date').value = v;
+  sel = null; bookClickAnchor = null; refresh(); updateQuickDays();
 };
 
 // ---- Hold + VietQR ----
@@ -671,14 +792,16 @@ $('#mm').onclick = async () => {
 };
 
 // ---- Refresh & real-time ----
-let busy = false;
+let busy = false, queuedRefresh = false;
 async function refresh() {
-  if (busy) return; busy = true;
+  if (busy) { queuedRefresh = true; return; }
+  busy = true;
   try {
     if (!S && curTab==='book') $('#grid-book').innerHTML = Array.from({length:6}, () =>
       '<tr>' + Array.from({length:6}, () => '<td><div class="skeleton h-9 rounded-lg"></div></td>').join('') + '</tr>').join('');
     await load();
     if (curTab==='book') renderBook();
+    if (window.n3SyncFromState) window.n3SyncFromState();
     if (curTab==='my') await renderMy();
     if (curTab==='admin') await renderAdmin();
   } catch (e) {
@@ -686,6 +809,7 @@ async function refresh() {
     else toast(e.message, 'err');
   }
   busy = false;
+  if (queuedRefresh) { queuedRefresh = false; refresh(); }
 }
 io().on('changed', refresh);
 setInterval(() => { if (S) { S.now += 30000; if (curTab==='book') refresh(); } }, 30000);
